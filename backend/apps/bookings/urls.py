@@ -1,13 +1,37 @@
 """
 URLs — app bookings
 
-Sprint 0: sin endpoints activos.
+Registra los ViewSets de Booking y CashMovement con DefaultRouter,
+y la view de disponibilidad como ruta explícita.
 
-Registrar en config/urls.py con:
+Rutas generadas:
+  GET    /api/bookings/                     — listado (admin/operator)
+  POST   /api/bookings/                     — crear reserva (AllowAny)
+  GET    /api/bookings/{id}/                — detalle
+  POST   /api/bookings/{id}/confirm/        — confirmar (operator/admin)
+  POST   /api/bookings/{id}/cancel/         — cancelar
+  POST   /api/bookings/{id}/complete/       — completar (operator/admin)
+  GET    /api/cash-movements/               — caja (operator/admin)
+  GET    /api/courts/{court_id}/availability/?date=YYYY-MM-DD  — grilla (AllowAny)
+
+Incluido en config/urls.py con:
     path("api/", include("apps.bookings.urls"))
-cuando se construyan los endpoints en Sprint 1+.
 """
 
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-urlpatterns = []
+from apps.bookings.views import AvailabilityView, BookingViewSet, CashMovementViewSet
+
+router = DefaultRouter()
+router.register(r"bookings", BookingViewSet, basename="booking")
+router.register(r"cash-movements", CashMovementViewSet, basename="cash-movement")
+
+urlpatterns = [
+    path("", include(router.urls)),
+    path(
+        "courts/<int:court_id>/availability/",
+        AvailabilityView.as_view(),
+        name="court-availability",
+    ),
+]

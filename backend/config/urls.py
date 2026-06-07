@@ -16,6 +16,15 @@ Endpoints de negocio — Sprint 1:
   /api/courts/{id}/        — GET retrieve, PATCH partial_update, DELETE (soft-delete)
   /api/schedule-blocks/    — ABM bloques horarios (GET list, POST create)
   /api/schedule-blocks/{id}/ — GET retrieve, PATCH partial_update, DELETE (soft-delete)
+
+Endpoints de negocio — Sprint 2 (motor de reservas):
+  /api/bookings/                        — GET listado, POST crear reserva
+  /api/bookings/{id}/                   — GET detalle
+  /api/bookings/{id}/confirm/           — POST confirmar (operator/admin)
+  /api/bookings/{id}/cancel/            — POST cancelar
+  /api/bookings/{id}/complete/          — POST completar (operator/admin)
+  /api/cash-movements/                  — GET caja diaria (operator/admin)
+  /api/courts/{id}/availability/        — GET grilla de disponibilidad (AllowAny)
 """
 
 from django.contrib import admin
@@ -41,6 +50,9 @@ urlpatterns = [
 
     # Courts y ScheduleBlocks — Sprint 1
     path("api/", include("apps.courts.urls")),
+
+    # Bookings (motor de reservas) y CashMovements — Sprint 2
+    path("api/", include("apps.bookings.urls")),
 
     # Swagger / OpenAPI (drf-spectacular)
     # AllowAny explícito para que no lo bloquee el DEFAULT_PERMISSION_CLASSES=IsAuthenticated
