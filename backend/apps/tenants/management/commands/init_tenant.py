@@ -86,8 +86,14 @@ class Command(BaseCommand):
                 "Usá solo letras, números y guiones bajos."
             )
 
-        # --- Idempotencia: verificar si el tenant ya existe ---
-        if Tenant.objects.filter(schema_name=schema_name).exists():
+        # --- Idempotencia: recuperar o crear el registro Tenant ---
+        # Se separa la verificación en dos casos:
+        #   A) El registro del modelo Tenant existe → no tocar nada.
+        #   B) El registro no existe pero el schema PG puede existir (ej: rollback previo)
+        #      → recrear solo el registro Django; django-tenants usa auto_create_schema=True
+        #      pero si el schema ya existe en PG el CREATE SCHEMA IF NOT EXISTS es no-op.
+        tenant_qs = Tenant.objects.filter(schema_name=schema_name)
+        if tenant_qs.exists():
             self.stdout.write(
                 self.style.WARNING(
                     f"[create_tenant] El tenant con schema '{schema_name}' ya existe. "
@@ -99,13 +105,15 @@ class Command(BaseCommand):
         self.stdout.write(f"Creando tenant '{name}' (schema: {schema_name})...")
 
         # --- 1. Crear el Tenant (django-tenants crea el esquema automáticamente) ---
+        # Si el schema PG ya existe (ej: el registro fue eliminado pero el schema quedó),
+        # django-tenants emite CREATE SCHEMA IF NOT EXISTS — seguro y sin pérdida de datos.
         try:
             tenant = Tenant(schema_name=schema_name, name=name)
             tenant.save()  # auto_create_schema=True: crea el esquema al guardar
         except Exception as exc:
             raise CommandError(f"Error al crear el tenant: {exc}") from exc
 
-        self.stdout.write(f"  Esquema PostgreSQL '{schema_name}' creado.")
+        self.stdout.write(f"  Esquema PostgreSQL '{schema_name}' creado (o ya existía).")
 
         # --- 2. Crear el Domain ---
         try:

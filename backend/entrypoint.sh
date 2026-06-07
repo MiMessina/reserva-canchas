@@ -56,8 +56,9 @@ python manage.py init_tenant \
   --name "Complejo Demo" \
   --domain demo.localhost \
   --admin-email "${DEMO_ADMIN_EMAIL:-admin@demo.localhost}" \
-  --admin-password "${DEMO_ADMIN_PASSWORD}" \
-  || true  # Idempotente: si ya existe, continúa
+  --admin-password "${DEMO_ADMIN_PASSWORD}"
+# init_tenant es idempotente: si el tenant ya existe sale con código 0.
+# Si falla por otro motivo (ej: DB inaccesible) el set -e detiene el script.
 
 echo "[entrypoint] Configuración completada."
 
