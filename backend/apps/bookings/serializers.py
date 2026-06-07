@@ -5,7 +5,9 @@ Los serializers validan estructura y transforman datos; NO gobiernan negocio (RU
 La lógica de negocio (XOR user/guest, concurrencia, transiciones) vive en services.py.
 
 Serializers:
-  BookingSerializer       — lectura (lista y detalle).
+  BookingPublicSerializer — respuesta pública (create, player). Sin datos de contacto de terceros.
+  BookingStaffSerializer  — respuesta staff (list, retrieve staff, confirm, complete). Con contacto.
+  BookingSerializer       — alias de BookingStaffSerializer para compatibilidad interna.
   BookingCreateSerializer — escritura (crear reserva, invitado o player).
   BookingCancelSerializer — escritura (motivo de cancelación).
   CashMovementSerializer  — lectura de movimientos de caja.
@@ -17,12 +19,13 @@ from apps.bookings.models import Booking, CashMovement
 from apps.courts.models import Court
 
 
-class BookingSerializer(serializers.ModelSerializer):
+class BookingPublicSerializer(serializers.ModelSerializer):
     """
-    Serializer de lectura para Booking.
+    Respuesta pública para el creador de la reserva y para players.
 
-    Expone todos los campos públicos de una reserva.
-    Usado en GET list, GET detail y como respuesta a mutaciones.
+    No expone guest_phone, guest_name ni la FK user para proteger
+    datos personales de terceros (Fix de seguridad Sprint 2).
+    Usado en: POST /api/bookings/ (create) y retrieve de players.
     """
 
     court_name = serializers.CharField(
@@ -42,7 +45,51 @@ class BookingSerializer(serializers.ModelSerializer):
             "id",
             "court",
             "court_name",
+            "start_dt",
+            "end_dt",
+            "status",
+            "status_display",
+            "price",
+            "cancellation_reason",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+
+class BookingStaffSerializer(serializers.ModelSerializer):
+    """
+    Respuesta para operator y tenant_admin.
+
+    Incluye datos de contacto del jugador/invitado (guest_name, guest_phone, user).
+    Usado en: GET list, confirm, complete, cancel (staff), retrieve (staff).
+    """
+
+    court_name = serializers.CharField(
+        source="court.name",
+        read_only=True,
+        help_text="Nombre de la cancha.",
+    )
+    status_display = serializers.CharField(
+        source="get_status_display",
+        read_only=True,
+        help_text="Etiqueta legible del estado de la reserva.",
+    )
+    user_email = serializers.EmailField(
+        source="user.email",
+        read_only=True,
+        allow_null=True,
+        help_text="Email del usuario registrado. Null si es reserva de invitado.",
+    )
+
+    class Meta:
+        model = Booking
+        fields = [
+            "id",
+            "court",
+            "court_name",
             "user",
+            "user_email",
             "guest_name",
             "guest_phone",
             "start_dt",
@@ -55,17 +102,12 @@ class BookingSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = [
-            "id",
-            "court_name",
-            "status_display",
-            "end_dt",
-            "price",
-            "status",
-            "is_active",
-            "created_at",
-            "updated_at",
-        ]
+        read_only_fields = fields
+
+
+# Alias para compatibilidad con código existente que importa BookingSerializer.
+# Apunta al serializer completo (staff). Las views nuevas usan los nombres explícitos.
+BookingSerializer = BookingStaffSerializer
 
 
 class BookingCreateSerializer(serializers.Serializer):

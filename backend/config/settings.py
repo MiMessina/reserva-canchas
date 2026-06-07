@@ -18,6 +18,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 # ---------------------------------------------------------------------------
 # Rutas
 # ---------------------------------------------------------------------------
@@ -26,11 +28,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 # Seguridad
 # ---------------------------------------------------------------------------
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    # Valor de fallback solo para CI/test; en producción DEBE venir del entorno.
-    "django-insecure-fallback-key-for-dev-only-change-in-production",
-)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "La variable de entorno DJANGO_SECRET_KEY no está configurada. "
+        "Definila en el archivo .env antes de levantar el servidor."
+    )
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
@@ -208,6 +211,27 @@ REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": [
         "rest_framework.renderers.JSONRenderer",
     ],
+    # Rate limiting (DRF built-in, sin dependencias externas).
+    # Protege POST /api/bookings/ y GET /api/courts/{id}/availability/ (AllowAny)
+    # contra abuso y flood de reservas falsas.
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/minute",
+        "user": "300/minute",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Cache local (requerida por DRF throttling cuando no hay Redis)
+# Redis/Celery son Post-MVP; en MVP usamos LocMemCache.
+# ---------------------------------------------------------------------------
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
 }
 
 # ---------------------------------------------------------------------------

@@ -335,19 +335,30 @@ def cancel_booking(*, booking: Booking, cancelled_by, reason: str = "") -> Booki
         booking.cancellation_reason = reason if reason.strip() else "Sin motivo especificado."
         booking.save(update_fields=["status", "cancellation_reason", "updated_at"])
 
-        # Si estaba confirmada, registrar contrapartida en caja (monto negativo)
-        if was_confirmed and cancelled_by is not None:
+        # Si estaba confirmada, registrar contrapartida en caja (monto negativo).
+        # CashMovement.operator es FK obligatoria (PROTECT), no puede ser NULL.
+        # Cuando cancelled_by=None (cancelación automática del sistema), se loguea
+        # la advertencia en lugar de crashear. En un sprint futuro se puede agregar
+        # un usuario "sistema" para estos casos (evita el warning).
+        if was_confirmed:
             actor_label = cancelled_by.email if cancelled_by else "sistema"
-            CashMovement.objects.create(
-                booking=booking,
-                operator=cancelled_by,
-                amount=-booking.price,
-                notes=(
-                    f"Cancelación de reserva confirmada. "
-                    f"Motivo: {booking.cancellation_reason}. "
-                    f"Actor: {actor_label}."
-                ),
-            )
+            if cancelled_by is not None:
+                CashMovement.objects.create(
+                    booking=booking,
+                    operator=cancelled_by,
+                    amount=-booking.price,
+                    notes=(
+                        f"Cancelación de reserva confirmada. "
+                        f"Motivo: {booking.cancellation_reason}. "
+                        f"Actor: {actor_label}."
+                    ),
+                )
+            else:
+                logger.warning(
+                    "Reserva CONFIRMED cancelada sin actor (sistema): id=%s. "
+                    "No se generó CashMovement negativo — revisar manualmente.",
+                    booking.pk,
+                )
 
     logger.info(
         "Reserva cancelada: id=%s cancelled_by=%s reason=%s",

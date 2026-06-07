@@ -37,7 +37,9 @@ from apps.bookings.selectors import get_availability
 from apps.bookings.serializers import (
     BookingCancelSerializer,
     BookingCreateSerializer,
+    BookingPublicSerializer,
     BookingSerializer,
+    BookingStaffSerializer,
     CashMovementSerializer,
 )
 from apps.bookings.services import (
@@ -79,6 +81,32 @@ class BookingViewSet(viewsets.GenericViewSet):
     """
 
     pagination_class = None  # heredará la paginación global de DRF settings
+
+    # -----------------------------------------------------------------------
+    # Helpers internos
+    # -----------------------------------------------------------------------
+
+    def _get_booking_serializer(self, *args, **kwargs):
+        """
+        Retorna el serializer apropiado según el rol del usuario.
+
+        Staff (operator / tenant_admin): BookingStaffSerializer (incluye contacto).
+        Resto (player, invitado, anónimo): BookingPublicSerializer (sin datos personales).
+        """
+        if (
+            self.request.user.is_authenticated
+            and self.request.user.is_staff_of_complex
+        ):
+            return BookingStaffSerializer(*args, **kwargs)
+        return BookingPublicSerializer(*args, **kwargs)
+
+    def _get_staff_booking(self, pk):
+        """
+        Obtiene una reserva activa del tenant actual.
+        Uso exclusivo de acciones staff (confirm, complete).
+        Delega en get_queryset() para respetar el scope del tenant.
+        """
+        return get_object_or_404(self.get_queryset(), pk=pk)
 
     def get_permissions(self):
         if self.action == "create":
@@ -151,8 +179,8 @@ class BookingViewSet(viewsets.GenericViewSet):
         qs = self.get_queryset()
         page = self.paginate_queryset(qs)
         if page is not None:
-            return self.get_paginated_response(BookingSerializer(page, many=True).data)
-        return Response(BookingSerializer(qs, many=True).data)
+            return self.get_paginated_response(BookingStaffSerializer(page, many=True).data)
+        return Response(BookingStaffSerializer(qs, many=True).data)
 
     @extend_schema(
         summary="Crear reserva",
@@ -180,7 +208,7 @@ class BookingViewSet(viewsets.GenericViewSet):
             guest_name=data.get("guest_name", ""),
             guest_phone=data.get("guest_phone", ""),
         )
-        return Response(BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
+        return Response(BookingPublicSerializer(booking).data, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         summary="Detalle de reserva",
@@ -194,7 +222,7 @@ class BookingViewSet(viewsets.GenericViewSet):
     )
     def retrieve(self, request, pk=None):
         booking = get_object_or_404(self.get_queryset(), pk=pk)
-        return Response(BookingSerializer(booking).data)
+        return Response(self._get_booking_serializer(booking).data)
 
     @extend_schema(
         summary="Confirmar reserva",
@@ -207,9 +235,9 @@ class BookingViewSet(viewsets.GenericViewSet):
     )
     @action(detail=True, methods=["post"])
     def confirm(self, request, pk=None):
-        booking = get_object_or_404(Booking.objects.filter(is_active=True), pk=pk)
+        booking = self._get_staff_booking(pk)
         updated = confirm_booking(booking=booking, operator=request.user)
-        return Response(BookingSerializer(updated).data)
+        return Response(BookingStaffSerializer(updated).data)
 
     @extend_schema(
         summary="Cancelar reserva",
@@ -224,14 +252,29 @@ class BookingViewSet(viewsets.GenericViewSet):
     )
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
-        booking = get_object_or_404(Booking.objects.filter(is_active=True), pk=pk)
+        # Para cancel usamos el queryset completo de reservas activas del tenant
+        # (sin el filtro de usuario de get_queryset) para poder evaluar el ownership
+        # y retornar 403 en lugar de 404. Un 404 ocultaría la existencia del recurso,
+        # pero la semántica correcta es 403: "el recurso existe pero no tenés permiso".
+        booking = get_object_or_404(
+            Booking.objects.filter(is_active=True).select_related("court", "user"),
+            pk=pk,
+        )
 
-        # Verificación de ownership para players (RBAC.md §4)
+        # Verificación de ownership defensiva (RBAC.md §4).
+        # Si el usuario NO es staff del complejo, solo puede cancelar su propia reserva
+        # (booking.user == request.user). Esto cubre players y cualquier rol futuro
+        # que no sea staff, en lugar de checar exclusivamente is_player.
         user = request.user
-        if user.is_authenticated and user.is_player:
+        if not (user.is_authenticated and user.is_staff_of_complex):
             if booking.user != user:
                 return Response(
-                    {"error": {"code": "TENANT_FORBIDDEN", "message": "No podés cancelar una reserva que no es tuya."}},
+                    {
+                        "error": {
+                            "code": "TENANT_FORBIDDEN",
+                            "message": "No podés cancelar una reserva que no es tuya.",
+                        }
+                    },
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
@@ -243,7 +286,7 @@ class BookingViewSet(viewsets.GenericViewSet):
             cancelled_by=user if user.is_authenticated else None,
             reason=serializer.validated_data.get("reason", ""),
         )
-        return Response(BookingSerializer(updated).data)
+        return Response(self._get_booking_serializer(updated).data)
 
     @extend_schema(
         summary="Completar reserva",
@@ -256,9 +299,9 @@ class BookingViewSet(viewsets.GenericViewSet):
     )
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
-        booking = get_object_or_404(Booking.objects.filter(is_active=True), pk=pk)
+        booking = self._get_staff_booking(pk)
         updated = complete_booking(booking=booking)
-        return Response(BookingSerializer(updated).data)
+        return Response(BookingStaffSerializer(updated).data)
 
 
 class CashMovementViewSet(viewsets.GenericViewSet):
@@ -273,24 +316,30 @@ class CashMovementViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, IsOperatorOrAdmin]
 
     def get_queryset(self):
+        # Solo movimientos de reservas activas (soft-delete awareness)
         qs = CashMovement.objects.select_related(
             "booking", "booking__court", "operator"
-        )
+        ).filter(booking__is_active=True)
+
         date = self.request.query_params.get("date")
         if date:
             # Filtrar por fecha en hora Buenos Aires: se convierte el día local
-            # a un rango UTC para evitar desfase de 3 horas (UTС-3).
-            from datetime import datetime
+            # a un rango UTC para evitar desfase de 3 horas (UTC-3).
+            from datetime import datetime, date as date_type
             from zoneinfo import ZoneInfo
             BUENOS_AIRES = ZoneInfo("America/Argentina/Buenos_Aires")
             try:
-                from datetime import date as date_type
                 day = date_type.fromisoformat(date)
-                day_start = datetime(day.year, day.month, day.day, 0, 0, tzinfo=BUENOS_AIRES)
-                day_end = datetime(day.year, day.month, day.day, 23, 59, 59, 999999, tzinfo=BUENOS_AIRES)
-                qs = qs.filter(created_at__gte=day_start, created_at__lte=day_end)
             except ValueError:
-                pass  # fecha inválida: no filtrar, devolver todo
+                # Fecha inválida: marcamos el flag para retornar 400 en list()
+                self._invalid_date = True
+                return CashMovement.objects.none()
+            self._invalid_date = False
+            day_start = datetime(day.year, day.month, day.day, 0, 0, tzinfo=BUENOS_AIRES)
+            day_end = datetime(day.year, day.month, day.day, 23, 59, 59, 999999, tzinfo=BUENOS_AIRES)
+            qs = qs.filter(created_at__gte=day_start, created_at__lte=day_end)
+        else:
+            self._invalid_date = False
         return qs
 
     @extend_schema(
@@ -307,6 +356,16 @@ class CashMovementViewSet(viewsets.GenericViewSet):
     )
     def list(self, request):
         qs = self.get_queryset()
+        if getattr(self, "_invalid_date", False):
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Formato de fecha inválido. Usar YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         page = self.paginate_queryset(qs)
         if page is not None:
             return self.get_paginated_response(CashMovementSerializer(page, many=True).data)
@@ -352,6 +411,8 @@ class AvailabilityView(APIView):
         tags=["bookings"],
     )
     def get(self, request, court_id):
+        from datetime import date as date_type, timedelta as td
+
         court = get_object_or_404(Court, pk=court_id, is_active=True)
 
         date_str = request.query_params.get("date")
@@ -361,6 +422,33 @@ class AvailabilityView(APIView):
                     "error": {
                         "code": "VALIDATION_ERROR",
                         "message": "El parámetro 'date' es obligatorio. Formato: YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar formato antes del límite de 90 días
+        try:
+            requested_date = date_type.fromisoformat(date_str)
+        except ValueError:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Formato de fecha inválido. Usar YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Limitar a 90 días de anticipación para evitar abuso y saturación de DB
+        max_date = date_type.today() + td(days=90)
+        if requested_date > max_date:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "No se puede consultar disponibilidad con más de 90 días de anticipación.",
                     }
                 },
                 status=status.HTTP_400_BAD_REQUEST,

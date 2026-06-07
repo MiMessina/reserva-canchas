@@ -108,7 +108,11 @@ class TestBookingCRUD(TenantTestCase):
     # -----------------------------------------------------------------------
 
     def test_guest_can_create_booking(self):
-        """POST /api/bookings/ sin JWT con guest_name+phone → 201 PENDING_PAYMENT."""
+        """POST /api/bookings/ sin JWT con guest_name+phone → 201 PENDING_PAYMENT.
+
+        FIX 3 (security review): la respuesta pública (BookingPublicSerializer)
+        no expone guest_name, guest_phone ni user para proteger datos personales.
+        """
         response = self._post_booking({
             "court": self.court.pk,
             "start_dt": self.valid_start.isoformat(),
@@ -118,16 +122,22 @@ class TestBookingCRUD(TenantTestCase):
         self.assertEqual(response.status_code, 201, response.content)
         data = response.json()
         self.assertEqual(data["status"], "PENDING_PAYMENT")
-        self.assertEqual(data["guest_name"], "Juan Jugador")
-        self.assertIsNone(data["user"])
         self.assertEqual(data["price"], "5000.00")
+        # El serializer público NO expone datos de contacto (FIX 3)
+        self.assertNotIn("guest_name", data)
+        self.assertNotIn("guest_phone", data)
+        self.assertNotIn("user", data)
 
     # -----------------------------------------------------------------------
     # Caso 2: player autenticado puede crear reserva sin guest_*
     # -----------------------------------------------------------------------
 
     def test_player_can_create_booking(self):
-        """POST /api/bookings/ con JWT de player (sin guest) → 201 PENDING_PAYMENT."""
+        """POST /api/bookings/ con JWT de player (sin guest) → 201 PENDING_PAYMENT.
+
+        FIX 3 (security review): la respuesta pública (BookingPublicSerializer)
+        no expone user FK ni guest_name para proteger datos personales.
+        """
         # Usar un slot diferente para no solapar con otros tests
         start = datetime(2027, 1, 4, 15, 0, tzinfo=tz.utc)
         response = self._post_booking(
@@ -140,8 +150,10 @@ class TestBookingCRUD(TenantTestCase):
         self.assertEqual(response.status_code, 201, response.content)
         data = response.json()
         self.assertEqual(data["status"], "PENDING_PAYMENT")
-        self.assertEqual(data["user"], self.player.pk)
-        self.assertEqual(data["guest_name"], "")
+        # El serializer público NO expone user FK ni guest_name (FIX 3)
+        self.assertNotIn("user", data)
+        self.assertNotIn("guest_name", data)
+        self.assertNotIn("guest_phone", data)
 
     # -----------------------------------------------------------------------
     # Caso 3: no se puede reservar en el pasado
@@ -363,14 +375,17 @@ class TestBookingCRUD(TenantTestCase):
     # -----------------------------------------------------------------------
 
     def test_availability_returns_slots(self):
-        """GET /api/courts/{id}/availability/?date=... → lista de slots con is_available."""
-        # 2027-01-04 es lunes (weekday=0), tiene ScheduleBlock 08:00-22:00
+        """GET /api/courts/{id}/availability/?date=... → lista de slots con is_available.
+
+        FIX 5 (security review): se usa una fecha dentro de los 90 días permitidos.
+        2026-06-08 es lunes (weekday=0), tiene ScheduleBlock 08:00-22:00.
+        """
         response = self.client.get(
-            f"/api/courts/{self.court.pk}/availability/?date=2027-01-04",
+            f"/api/courts/{self.court.pk}/availability/?date=2026-06-08",
         )
         self.assertEqual(response.status_code, 200, response.content)
         data = response.json()
-        self.assertEqual(data["date"], "2027-01-04")
+        self.assertEqual(data["date"], "2026-06-08")
         self.assertEqual(data["court"], self.court.pk)
         self.assertIn("slots", data)
         slots = data["slots"]
@@ -383,29 +398,33 @@ class TestBookingCRUD(TenantTestCase):
             self.assertIn("end_dt", slot)
 
     def test_availability_marks_booked_slot_unavailable(self):
-        """Un slot ya reservado aparece como is_available=False en la grilla."""
-        # Reservar el slot de las 14:00 UTC (= 11:00 BA)
-        slot_start = datetime(2027, 1, 4, 14, 0, tzinfo=tz.utc)
+        """Un slot ya reservado aparece como is_available=False en la grilla.
+
+        FIX 5 (security review): se usa una fecha dentro de los 90 días permitidos.
+        2026-06-08 es lunes. Slot de las 11:00 UTC = 08:00 Buenos Aires (dentro del bloque).
+        """
+        # Reservar el slot de las 11:00 UTC (= 08:00 BA, primer slot del día)
+        slot_start = datetime(2026, 6, 8, 11, 0, tzinfo=tz.utc)
         Booking.objects.create(
             court=self.court,
             guest_name="Ocupado",
             guest_phone="999",
             start_dt=slot_start,
-            end_dt=slot_start.replace(hour=15),
+            end_dt=slot_start.replace(hour=12),
             price="5000.00",
             status=Booking.Status.PENDING_PAYMENT,
         )
 
         response = self.client.get(
-            f"/api/courts/{self.court.pk}/availability/?date=2027-01-04",
+            f"/api/courts/{self.court.pk}/availability/?date=2026-06-08",
         )
         self.assertEqual(response.status_code, 200)
         slots = response.json()["slots"]
 
-        # Buscar el slot de las 14:00 UTC
-        slot_14 = next((s for s in slots if "2027-01-04T14:00:00" in s["start_dt"]), None)
-        self.assertIsNotNone(slot_14, "El slot de las 14:00 UTC no fue encontrado.")
-        self.assertFalse(slot_14["is_available"], "El slot reservado debe estar como no disponible.")
+        # Buscar el slot de las 11:00 UTC
+        slot_11 = next((s for s in slots if "2026-06-08T11:00:00" in s["start_dt"]), None)
+        self.assertIsNotNone(slot_11, "El slot de las 11:00 UTC no fue encontrado.")
+        self.assertFalse(slot_11["is_available"], "El slot reservado debe estar como no disponible.")
 
     def test_availability_no_date_param_returns_400(self):
         """GET /api/courts/{id}/availability/ sin ?date → 400 VALIDATION_ERROR."""
