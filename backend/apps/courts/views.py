@@ -28,7 +28,7 @@ import logging
 
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from apps.courts.models import Court, ScheduleBlock
@@ -63,8 +63,15 @@ class CourtViewSet(viewsets.ModelViewSet):
       Baja lógica (is_active=False). Solo tenant_admin. El registro NO se borra físicamente.
     """
 
-    permission_classes = [IsAuthenticated, IsTenantAdminOrReadOnly]
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+
+    def get_permissions(self):
+        # list y retrieve son públicos: el jugador necesita ver canchas sin JWT
+        # para poder usar la grilla de reservas (igual que /availability/).
+        # Mutaciones requieren tenant_admin.
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return [IsAuthenticated(), IsTenantAdminOrReadOnly()]
 
     def get_queryset(self):
         """

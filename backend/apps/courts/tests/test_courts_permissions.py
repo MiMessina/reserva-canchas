@@ -87,10 +87,10 @@ class TestCourtsPermissions(TenantTestCase):
     # Sin autenticación
     # -----------------------------------------------------------------------
 
-    def test_unauthenticated_get_courts_returns_401(self):
-        """GET /api/courts/ sin token → 401."""
+    def test_unauthenticated_get_courts_returns_200(self):
+        """GET /api/courts/ sin token → 200 (list/retrieve son públicos para la grilla de reservas)."""
         response = self.client.get("/api/courts/")
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 200)
 
     def test_unauthenticated_post_courts_returns_401(self):
         """POST /api/courts/ sin token → 401."""
