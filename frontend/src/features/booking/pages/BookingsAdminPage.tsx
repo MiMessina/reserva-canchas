@@ -21,6 +21,7 @@ import {
   Filter,
   ClipboardList,
   ChevronRight,
+  User,
 } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -62,6 +63,18 @@ function formatARS(value: string): string {
     currency: 'ARS',
     minimumFractionDigits: 0,
   }).format(num)
+}
+
+// ─── Helper de contacto ───────────────────────────────────────────────────────
+
+function contactLabel(booking: Booking): string {
+  if (booking.guest_name) {
+    return `Invitado: ${booking.guest_name}${booking.guest_phone ? ` · ${booking.guest_phone}` : ''}`
+  }
+  if (booking.user_email) {
+    return `Usuario: ${booking.user_email}`
+  }
+  return '—'
 }
 
 // ─── Badge de estado ──────────────────────────────────────────────────────────
@@ -210,15 +223,9 @@ function BookingCard({
 
       {/* Detalle */}
       <div className="px-4 py-3 space-y-1 text-sm text-gray-600">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">Jugador</span>
-          <span className="font-medium text-gray-800 truncate max-w-[60%]">
-            {booking.guest_name || '—'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">Tel.</span>
-          <span>{booking.guest_phone || '—'}</span>
+        <div className="flex items-center gap-1.5">
+          <User size={13} className="text-gray-400 shrink-0" aria-hidden="true" />
+          <span className="text-gray-500 truncate">{contactLabel(booking)}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-gray-500">Precio</span>
@@ -306,7 +313,10 @@ function BookingRow({
         {formatDateTimeBA(booking.start_dt)}
       </td>
       <td className="px-4 py-3 text-sm text-gray-700">
-        {booking.guest_name || '—'}
+        <div className="flex items-center gap-1.5">
+          <User size={13} className="text-gray-400 shrink-0" aria-hidden="true" />
+          <span className="truncate max-w-[180px]">{contactLabel(booking)}</span>
+        </div>
       </td>
       <td className="px-4 py-3">
         <StatusBadge status={booking.status} />

@@ -33,9 +33,13 @@ export interface Booking {
   id: number
   court: number
   court_name: string
-  user: number | null
-  guest_name: string
-  guest_phone: string
+  // Campos solo en BookingStaffSerializer (admin/operator):
+  user?: number | null
+  user_email?: string | null
+  guest_name?: string
+  guest_phone?: string
+  is_active?: boolean
+  // Campos en ambos serializers:
   start_dt: string            // ISO 8601 UTC
   end_dt: string              // ISO 8601 UTC
   status: BookingStatus

@@ -66,10 +66,11 @@ type BookingFormValues = z.infer<typeof bookingSchema>
 
 interface SlotRowProps {
   slot: Slot
+  price: string
   onReserve: (slot: Slot) => void
 }
 
-function SlotRow({ slot, onReserve }: SlotRowProps) {
+function SlotRow({ slot, price, onReserve }: SlotRowProps) {
   const timeRange = `${formatTimeBA(slot.start_dt)} – ${formatTimeBA(slot.end_dt)}`
 
   if (!slot.is_available) {
@@ -92,14 +93,19 @@ function SlotRow({ slot, onReserve }: SlotRowProps) {
         <Clock size={15} aria-hidden="true" />
         <span className="text-sm font-semibold">{timeRange}</span>
       </div>
-      <Button
-        size="sm"
-        variant="primary"
-        onClick={() => onReserve(slot)}
-        className="bg-green-600 hover:bg-green-700 focus:ring-green-500"
-      >
-        Reservar
-      </Button>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-semibold text-green-800">
+          {formatARS(price)}
+        </span>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => onReserve(slot)}
+          className="bg-green-600 hover:bg-green-700 focus:ring-green-500"
+        >
+          Reservar
+        </Button>
+      </div>
     </li>
   )
 }
@@ -115,6 +121,11 @@ interface BookingModalProps {
   price: string
 }
 
+interface BookingSuccess {
+  bookingId: number
+  timeRange: string
+}
+
 function BookingModal({
   isOpen,
   onClose,
@@ -123,7 +134,7 @@ function BookingModal({
   courtName,
   price,
 }: BookingModalProps) {
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [successData, setSuccessData] = useState<BookingSuccess | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
   const createBooking = useCreateBooking()
 
@@ -138,7 +149,7 @@ function BookingModal({
 
   function handleClose() {
     reset()
-    setSuccessMessage(null)
+    setSuccessData(null)
     setApiError(null)
     onClose()
   }
@@ -147,15 +158,16 @@ function BookingModal({
     if (!slot) return
     setApiError(null)
     try {
-      await createBooking.mutateAsync({
+      const created = await createBooking.mutateAsync({
         court: courtId,
         start_dt: slot.start_dt,
         guest_name: values.guest_name,
         guest_phone: values.guest_phone,
       })
-      setSuccessMessage(
-        '¡Reserva creada! Te esperamos. Recordá enviar la seña por transferencia.',
-      )
+      setSuccessData({
+        bookingId: created.id,
+        timeRange: `${formatTimeBA(slot.start_dt)} – ${formatTimeBA(slot.end_dt)}`,
+      })
       reset()
     } catch (err) {
       setApiError(extractApiErrorMessage(err))
@@ -168,10 +180,21 @@ function BookingModal({
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Confirmar reserva" size="md">
-      {successMessage ? (
+      {successData ? (
         <div className="flex flex-col items-center py-4 text-center gap-4">
           <CheckCircle2 size={48} className="text-green-500" aria-hidden="true" />
-          <p className="text-sm text-gray-700 leading-relaxed">{successMessage}</p>
+          <div className="space-y-1">
+            <p className="text-base font-semibold text-gray-900">Reserva confirmada</p>
+            <p className="text-sm text-gray-600">
+              Turno: {courtName} · {successData.timeRange}
+            </p>
+            <p className="text-sm font-medium text-brand-700">
+              Número de reserva: #{successData.bookingId}
+            </p>
+          </div>
+          <p className="text-sm text-gray-500 leading-relaxed">
+            Presentate en recepcion para confirmar la seña.
+          </p>
           <Button variant="primary" onClick={handleClose} fullWidth>
             Cerrar
           </Button>
@@ -432,6 +455,7 @@ export function BookingPage() {
                 <SlotRow
                   key={slot.start_dt}
                   slot={slot}
+                  price={selectedCourt?.base_price ?? '0'}
                   onReserve={handleSlotReserve}
                 />
               ))}
