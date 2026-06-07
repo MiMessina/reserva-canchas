@@ -15,11 +15,17 @@
  *   /booking            → BookingPage (grilla publica de turnos — sin auth)
  *   /admin/bookings     → BookingsAdminPage (panel operator/admin — JWT)
  *   /admin/cashbox      → CashboxPage (caja diaria — JWT)
+ *
+ * Layout:
+ *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
+ *   AdminLayout (navbar + Outlet). La ruta /booking es pública y tiene
+ *   su propio header inline; no usa AdminLayout.
  */
 
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ProtectedRoute } from './ProtectedRoute'
+import { AdminLayout } from '@/components/AdminLayout'
 import { DashboardPage } from '@/app/DashboardPage'
 import { CourtsListPage } from '@/features/courts/pages/CourtsListPage'
 import { CourtDetailPage } from '@/features/courts/pages/CourtDetailPage'
@@ -35,6 +41,7 @@ const router = createBrowserRouter([
   },
   {
     // Ruta publica: grilla de turnos (AllowAny — el jugador no necesita cuenta)
+    // Tiene su propio header; NO usa AdminLayout.
     path: '/booking',
     element: <BookingPage />,
   },
@@ -43,24 +50,30 @@ const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        path: '/',
-        element: <DashboardPage />,
-      },
-      {
-        path: '/admin/courts',
-        element: <CourtsListPage />,
-      },
-      {
-        path: '/admin/courts/:id',
-        element: <CourtDetailPage />,
-      },
-      {
-        path: '/admin/bookings',
-        element: <BookingsAdminPage />,
-      },
-      {
-        path: '/admin/cashbox',
-        element: <CashboxPage />,
+        // AdminLayout: navbar + Outlet para todas las rutas del panel admin.
+        element: <AdminLayout />,
+        children: [
+          {
+            path: '/',
+            element: <DashboardPage />,
+          },
+          {
+            path: '/admin/courts',
+            element: <CourtsListPage />,
+          },
+          {
+            path: '/admin/courts/:id',
+            element: <CourtDetailPage />,
+          },
+          {
+            path: '/admin/bookings',
+            element: <BookingsAdminPage />,
+          },
+          {
+            path: '/admin/cashbox',
+            element: <CashboxPage />,
+          },
+        ],
       },
     ],
   },
