@@ -278,7 +278,19 @@ class CashMovementViewSet(viewsets.GenericViewSet):
         )
         date = self.request.query_params.get("date")
         if date:
-            qs = qs.filter(created_at__date=date)
+            # Filtrar por fecha en hora Buenos Aires: se convierte el día local
+            # a un rango UTC para evitar desfase de 3 horas (UTС-3).
+            from datetime import datetime
+            from zoneinfo import ZoneInfo
+            BUENOS_AIRES = ZoneInfo("America/Argentina/Buenos_Aires")
+            try:
+                from datetime import date as date_type
+                day = date_type.fromisoformat(date)
+                day_start = datetime(day.year, day.month, day.day, 0, 0, tzinfo=BUENOS_AIRES)
+                day_end = datetime(day.year, day.month, day.day, 23, 59, 59, 999999, tzinfo=BUENOS_AIRES)
+                qs = qs.filter(created_at__gte=day_start, created_at__lte=day_end)
+            except ValueError:
+                pass  # fecha inválida: no filtrar, devolver todo
         return qs
 
     @extend_schema(
