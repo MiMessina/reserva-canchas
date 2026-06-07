@@ -95,6 +95,15 @@ class TestBookingConcurrency(TransactionTestCase):
             pass
         super().tearDown()
 
+    def _fixture_teardown(self):
+        # TransactionTestCase llama a `flush` (trunca todas las tablas) después de
+        # cada test. En un entorno multi-tenant eso incluye Tenant y Domain del esquema
+        # public, eliminando el tenant demo y cualquier otro tenant pre-existente.
+        # Dado que gestionamos el ciclo de vida del tenant de prueba manualmente en
+        # setUp()/tearDown(), sobreescribimos esto como no-op para no destruir datos
+        # del esquema public que no pertenecen a este test.
+        pass
+
     def test_concurrent_booking_only_one_wins(self):
         """
         Dos hilos intentan reservar el mismo slot simultáneamente.
