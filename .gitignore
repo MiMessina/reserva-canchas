@@ -1,0 +1,67 @@
+# ── Secretos ──────────────────────────────────────────────────────────────────
+.env
+*.env.local
+*.env.*.local
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pycache
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.Python
+
+# ── Django ────────────────────────────────────────────────────────────────────
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+static_collected/
+
+# ── Pytest / coverage ─────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# Volúmenes locales de Postgres (si se montan en ./data)
+data/
+postgres_data/
+
+# ── Editores e IDEs ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Ruff / mypy / linters ─────────────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+
+# ── Claude Code (local) ───────────────────────────────────────────────────────
+.claude/settings.local.json
+
+# ── Archivos temporales ───────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig

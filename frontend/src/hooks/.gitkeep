@@ -1,0 +1,2 @@
+# Placeholder — Sprint 0.
+# Hooks compartidos (ej: useApiError, usePagination) se crean cuando los features los necesiten.

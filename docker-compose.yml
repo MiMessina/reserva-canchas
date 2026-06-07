@@ -1,0 +1,100 @@
+# docker-compose.yml — SaaS Gestión de Canchas (Sprint 0)
+#
+# Servicios: db (PostgreSQL 16), backend (Django), frontend (Vite dev server).
+# Redis/Celery: Post-MVP. NO incluir en Sprint 0 (ver RULES.md y STACK.md).
+#
+# Uso local:
+#   1. Copiar .env.example -> .env y completar las variables.
+#   2. docker compose up --build
+#   3. El tenant 'demo' se crea automáticamente via entrypoint.sh.
+#
+# Para ver logs en tiempo real: docker compose logs -f
+# Para entrar al backend: docker compose exec backend bash
+# Para correr tests: docker compose exec backend pytest
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # db — PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      # Volumen nombrado: los datos de la DB persisten entre reinicios de contenedor
+      - postgres_data:/var/lib/postgresql/data
+    # Puerto: solo expuesto al host para facilitar el acceso desde herramientas
+    # de desarrollo (DBeaver, TablePlus, etc.). En producción, comentar o quitar.
+    ports:
+      - "5432:5432"
+    healthcheck:
+      # pg_isready verifica que el servidor PostgreSQL acepte conexiones
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ---------------------------------------------------------------------------
+  # backend — Django REST Framework + django-tenants
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Estas variables se repiten aquí para que sean explícitas en el compose
+      # (tienen prioridad sobre el .env si hay conflicto, pero son idénticas)
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      # Monta el código fuente local: cualquier cambio se refleja sin rebuild
+      # (útil para desarrollo; en producción quitar este volumen)
+      - ./backend:/app
+    # El entrypoint.sh ya espera a Postgres, migra y crea el tenant demo.
+    # No se necesita command adicional; el CMD lo define el entrypoint.sh
+    # según DJANGO_DEBUG.
+
+  # ---------------------------------------------------------------------------
+  # frontend — React + Vite (dev server)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api}
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    volumes:
+      # Monta el código fuente local para hot reload del dev server de Vite
+      - ./frontend:/app
+      # Volumen nombrado para node_modules: evita que el bind mount del host
+      # sobreescriba los node_modules instalados en el contenedor
+      # (distinto OS/arquitectura entre Windows host y Linux container).
+      - frontend_node_modules:/app/node_modules
+
+# ---------------------------------------------------------------------------
+# Volúmenes nombrados
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    # La DB persiste aunque el contenedor se elimine.
+    # Para resetear todo: docker compose down -v
+  frontend_node_modules:
+    # Protege los node_modules del contenedor del bind mount del host.

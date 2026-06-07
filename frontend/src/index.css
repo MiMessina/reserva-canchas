@@ -1,0 +1,47 @@
+/* index.css — Estilos globales con directivas de Tailwind.
+   Mobile-first: Tailwind maneja los breakpoints (sm, md, lg, xl).
+   No agregar estilos de componentes acá; usar clases en los .tsx.
+*/
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Tipografía base */
+  html {
+    font-family: Inter, system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent; /* mejor UX en mobile */
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+
+  /* Focus visible accesible */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+
+  /* Scroll suave global */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  /* Utilidad para truncar texto en líneas múltiples */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

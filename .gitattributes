@@ -1,0 +1,12 @@
+# Normalizar line endings: LF en el repo, checkout según SO
+* text=auto eol=lf
+
+# Scripts de shell siempre con LF (Linux containers)
+*.sh text eol=lf
+entrypoint.sh text eol=lf
+
+# Archivos binarios
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
