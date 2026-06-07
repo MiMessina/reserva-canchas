@@ -5,10 +5,13 @@
  *
  * Rutas Sprint 0:
  *   /login        → LoginPage (pública)
- *   /             → DashboardPage (protegida)  — placeholder Sprint 0
+ *   /             → DashboardPage (protegida) — redirige a /admin/courts
  *
- * Rutas futuras (Sprint 1+) — se agregan acá cuando los features estén listos:
- *   /canchas      → courts/CourtsPage
+ * Rutas Sprint 1:
+ *   /admin/courts      → CourtsListPage (lista de canchas)
+ *   /admin/courts/:id  → CourtDetailPage (detalle de cancha)
+ *
+ * Rutas futuras (Sprint 2+):
  *   /reservas     → booking/BookingPage (grilla pública)
  *   /caja         → cashbox/CashboxPage
  */
@@ -17,6 +20,8 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { DashboardPage } from '@/app/DashboardPage'
+import { CourtsListPage } from '@/features/courts/pages/CourtsListPage'
+import { CourtDetailPage } from '@/features/courts/pages/CourtDetailPage'
 
 const router = createBrowserRouter([
   {
@@ -32,7 +37,14 @@ const router = createBrowserRouter([
         path: '/',
         element: <DashboardPage />,
       },
-      // Sprint 1+: agregar rutas de features acá
+      {
+        path: '/admin/courts',
+        element: <CourtsListPage />,
+      },
+      {
+        path: '/admin/courts/:id',
+        element: <CourtDetailPage />,
+      },
     ],
   },
   {

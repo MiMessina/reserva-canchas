@@ -82,7 +82,7 @@ def update_court(*, court: Court, **fields) -> Court:
 
     Retorna la instancia Court actualizada.
     """
-    allowed_fields = {"name", "court_type", "surface", "base_price", "slot_duration_minutes"}
+    allowed_fields = {"name", "court_type", "surface", "base_price", "slot_duration_minutes", "is_active"}
     for field, value in fields.items():
         if field in allowed_fields:
             setattr(court, field, value)

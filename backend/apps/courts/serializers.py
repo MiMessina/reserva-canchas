@@ -63,6 +63,7 @@ class CourtWriteSerializer(serializers.ModelSerializer):
             "surface",
             "base_price",
             "slot_duration_minutes",
+            "is_active",
         ]
 
 
