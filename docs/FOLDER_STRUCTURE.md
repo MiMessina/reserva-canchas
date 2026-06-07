@@ -36,6 +36,7 @@ reserva-canchas/
 │   └── adr/                      # Architecture Decision Records (ADR-001..00N)
 ├── backend/
 │   ├── apps/
+│   │   ├── common/               # Modelos/utilidades abstractas compartidas (ADR-011: TimeStampedSoftDeleteModel)
 │   │   ├── tenants/              # Modelo Tenant + Domain (esquema public)
 │   │   ├── users/                # Custom User, JWT, roles
 │   │   ├── courts/               # Court + ScheduleBlock (ABM canchas y horarios)
@@ -83,6 +84,7 @@ reserva-canchas/
 | `.claude/agents/` | Subagentes (instrucciones por rol + delegación ejecutable). **Fuente única** | Orchestrator (Milton) |
 | `.claude/commands/` | Slash commands (`/sprint-0`, `/nueva-feature`, `/revisar-seguridad`) | Orchestrator (Milton) |
 | `docs/` | Source of truth documental | Orchestrator (Milton) |
+| `backend/apps/common` | Modelos/utilidades abstractas compartidas (soft-delete + timestamps) | Backend (Erik/Luka) |
 | `backend/apps/tenants`, `users` | Multi-tenant, auth, roles | Backend Lead (Luka) |
 | `backend/apps/courts`, `bookings`, `cashbox` | Negocio: canchas, reservas, caja | Backend API (Erik) |
 | `frontend/features/booking` | Grilla pública y reserva del jugador | Frontend (Nacho) |

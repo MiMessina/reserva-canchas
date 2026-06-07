@@ -32,7 +32,7 @@ SECRET_KEY = os.environ.get(
     "django-insecure-fallback-key-for-dev-only-change-in-production",
 )
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS_RAW = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,demo.localhost")
 ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_RAW.split(",") if h.strip()]
@@ -75,9 +75,12 @@ TENANT_APPS = [
     "django.contrib.admin",
     "django.contrib.sessions",
     "django.contrib.messages",
+    # Utilidades comunes (ADR-011): modelo base abstracto TimeStampedSoftDeleteModel.
+    # No genera tablas propias (solo modelos abstractos).
+    "apps.common",
     # Dominio de negocio por tenant
     "apps.users",    # Custom User (ADR-007: por tenant, no compartido)
-    "apps.courts",   # ABM canchas + ScheduleBlock (Sprint 1+)
+    "apps.courts",   # ABM canchas + ScheduleBlock (Sprint 1)
     "apps.bookings", # Motor de reservas (Sprint 1+)
     "apps.cashbox",  # Caja diaria (Sprint 1+)
     # Framework y documentación

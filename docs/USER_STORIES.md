@@ -19,7 +19,26 @@
 **Como** usuario interno **quiero** loguearme y obtener un token **para** operar el panel de forma segura.
 **Criterios:** login y refresh funcionan; el front guarda el token y lo adjunta vía interceptor; ruta protegida; test de login.
 
-## 2. Motor de Reservas (features — post Sprint 0)
+## 2. Configuración del complejo (Sprint 1 — Admin)
+
+### HU-7 — ABM de canchas
+**Como** dueño del complejo (`tenant_admin`) **quiero** dar de alta, editar y desactivar mis canchas **para** publicar qué espacios alquilo y a qué precio.
+**Criterios de aceptación:**
+- Creo una cancha con nombre, tipo (`FUTBOL_5`/`FUTBOL_7`/`PADEL`), superficie, precio base y duración del turno (`slot_duration_minutes`).
+- Edito y desactivo (baja lógica: `is_active=False`, nunca borrado físico).
+- Un `operator` puede listar pero no mutar (403); un `player` no muta (403).
+- Las canchas quedan acotadas a mi complejo; no veo ni accedo a canchas de otro tenant (aislamiento).
+- Endpoints documentados en Swagger; el panel admin maneja loading/empty/error (mobile-first).
+
+### HU-8 — Configurar horarios de apertura/cierre
+**Como** dueño del complejo (`tenant_admin`) **quiero** definir los horarios de apertura y cierre de cada cancha por día de la semana **para** que luego se pueda calcular la disponibilidad de turnos.
+**Criterios de aceptación:**
+- Defino bloques `ScheduleBlock` por cancha y día (`weekday` 0=lunes … 6=domingo) con `open_time` y `close_time`.
+- No puedo crear un bloque con `open_time ≥ close_time` ni que se solape con otro bloque activo de la misma cancha y día (permitido turno partido mañana/tarde sin superposición).
+- Sin cruce de medianoche en el MVP (apertura y cierre el mismo día).
+- Solo `tenant_admin` configura horarios; `operator`/`player` no (403). Aislamiento por tenant.
+
+## 3. Motor de Reservas (features — Sprint 2-3)
 
 ### HU-1 — Ver grilla pública de turnos
 **Como** jugador **quiero** ver la disponibilidad de turnos de un complejo **para** elegir uno libre desde el celular.
@@ -64,10 +83,11 @@
 - Listado filtrable por fecha, acotado al tenant.
 - Un `player` no accede a la caja (403).
 
-## 3. Trazabilidad
+## 4. Trazabilidad
 
 | Historia | Documento de soporte |
 |---|---|
 | HU-0.* | `SPRINT_0.md`, `ARCHITECTURE.md` |
+| HU-7, HU-8 | `DER.md`, `RBAC.md`, `API_GUIDELINES.md` (Sprint 1 — ABM canchas y horarios) |
 | HU-1, HU-2, HU-3 | `WORKFLOW.md`, `API_GUIDELINES.md`, `templates/FEATURE_SPEC_TEMPLATE.md` (ejemplo Motor de Reservas) |
 | HU-4, HU-5, HU-6 | `WORKFLOW.md`, `RBAC.md` |

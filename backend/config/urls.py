@@ -11,11 +11,11 @@ Endpoints de Sprint 0:
 FIX R-08: /api/auth/login/ usa EmailTokenObtainPairView (email como identificador,
 no username). Contrato: POST {"email": "...", "password": "..."} → {access, refresh}.
 
-Endpoints de negocio (Sprint 1+):
-  /api/courts/
-  /api/bookings/
-  /api/cash-movements/
-  Estos se agregarán en cada app con include() cuando se construyan.
+Endpoints de negocio — Sprint 1:
+  /api/courts/             — ABM canchas (GET list, POST create)
+  /api/courts/{id}/        — GET retrieve, PATCH partial_update, DELETE (soft-delete)
+  /api/schedule-blocks/    — ABM bloques horarios (GET list, POST create)
+  /api/schedule-blocks/{id}/ — GET retrieve, PATCH partial_update, DELETE (soft-delete)
 """
 
 from django.contrib import admin
@@ -38,6 +38,9 @@ urlpatterns = [
     # EmailTokenObtainPairView acepta {"email", "password"} → {access, refresh}
     path("api/auth/login/", EmailTokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+
+    # Courts y ScheduleBlocks — Sprint 1
+    path("api/", include("apps.courts.urls")),
 
     # Swagger / OpenAPI (drf-spectacular)
     # AllowAny explícito para que no lo bloquee el DEFAULT_PERMISSION_CLASSES=IsAuthenticated
