@@ -98,3 +98,15 @@ export interface CashMovement {
   notes: string
   created_at: string          // ISO 8601 UTC
 }
+
+// ─── Resumen de caja diaria ───────────────────────────────────────────────────
+
+export interface CashDailySummary {
+  date: string                // YYYY-MM-DD
+  total: string               // decimal string; neto del día (puede ser negativo)
+  ingresos: string            // suma de amounts > 0
+  devoluciones: string        // suma de amounts < 0 (valor negativo o "0")
+  movements_count: number
+  ingresos_count: number
+  devoluciones_count: number
+}

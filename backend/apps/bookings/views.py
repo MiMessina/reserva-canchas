@@ -33,13 +33,14 @@ from rest_framework.views import APIView
 
 from apps.bookings.models import Booking, CashMovement
 from apps.bookings.permissions import IsOperatorOrAdmin
-from apps.bookings.selectors import get_availability
+from apps.bookings.selectors import get_availability, get_daily_cash_summary
 from apps.bookings.serializers import (
     BookingCancelSerializer,
     BookingCreateSerializer,
     BookingPublicSerializer,
     BookingSerializer,
     BookingStaffSerializer,
+    CashDailySummarySerializer,
     CashMovementSerializer,
 )
 from apps.bookings.services import (
@@ -368,6 +369,48 @@ class CashMovementViewSet(viewsets.GenericViewSet):
         if page is not None:
             return self.get_paginated_response(CashMovementSerializer(page, many=True).data)
         return Response(CashMovementSerializer(qs, many=True).data)
+
+    @extend_schema(
+        summary="Resumen diario de caja",
+        description=(
+            "Retorna totales del día: neto, ingresos (señas confirmadas), "
+            "devoluciones (cancelaciones de reservas confirmadas) y conteos. "
+            "Solo operator o admin. Parámetro date opcional (default: hoy en hora Buenos Aires). "
+            "Resuelve el problema de frontend que suma solo la página actual de movimientos."
+        ),
+        parameters=[
+            OpenApiParameter(
+                "date",
+                type=str,
+                description="Fecha en formato YYYY-MM-DD (hora Buenos Aires). Default: hoy.",
+            ),
+        ],
+        tags=["cashbox"],
+        responses={200: CashDailySummarySerializer},
+    )
+    @action(detail=False, methods=["get"])
+    def summary(self, request):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        date_str = request.query_params.get("date")
+        if not date_str:
+            date_str = datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).date().isoformat()
+
+        try:
+            data = get_daily_cash_summary(date_str)
+        except ValueError:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Formato de fecha inválido. Usar YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(CashDailySummarySerializer(data).data)
 
 
 class AvailabilityView(APIView):

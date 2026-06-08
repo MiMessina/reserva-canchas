@@ -5,21 +5,29 @@
  *
  * Funcionalidad:
  *  - Selector de fecha (default hoy).
+ *  - Tarjeta de totales: ingresos, devoluciones y total neto — siempre visible,
+ *    incluso con 0 movimientos. Los totales vienen del endpoint /summary/ del
+ *    backend (correcto sin importar la paginación de la lista).
  *  - Lista de movimientos del dia con monto (verde = positivo, rojo = negativo).
- *  - Total del dia: suma de todos los amounts.
- *  - Estados loading / empty / error.
+ *  - Estados loading / empty / error independientes para tarjeta y lista.
  *
- * Un amount negativo indica una reversion o cancelacion confirmada.
+ * Un amount negativo indica una reversion o cancelacion de reserva confirmada.
  */
 
 import { useState } from 'react'
-import { Wallet, CalendarDays, TrendingUp, TrendingDown } from 'lucide-react'
+import {
+  Wallet,
+  CalendarDays,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
-import { useCashMovements } from '../hooks/useBookings'
+import { useCashMovements, useCashMovementsSummary } from '../hooks/useBookings'
 import { formatTimeBA, toLocalDateStringBA } from '@/lib/datetime'
 import { extractApiErrorMessage } from '@/lib/apiError'
+import type { CashDailySummary } from '../types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -27,9 +35,9 @@ function todayLocalDate(): string {
   return toLocalDateStringBA(new Date())
 }
 
-function formatARS(value: string): string {
-  const num = parseFloat(value)
-  if (isNaN(num)) return value
+function formatARS(value: string | number): string {
+  const num = typeof value === 'number' ? value : parseFloat(value)
+  if (isNaN(num)) return String(value)
   return new Intl.NumberFormat('es-AR', {
     style: 'currency',
     currency: 'ARS',
@@ -37,8 +45,99 @@ function formatARS(value: string): string {
   }).format(num)
 }
 
-function sumAmounts(amounts: string[]): number {
-  return amounts.reduce((acc, val) => acc + parseFloat(val || '0'), 0)
+// ─── Tarjeta de totales ───────────────────────────────────────────────────────
+
+interface SummaryCardProps {
+  isLoading: boolean
+  isError: boolean
+  summary?: CashDailySummary
+}
+
+function SummaryCard({ isLoading, isError, summary }: SummaryCardProps) {
+  const total = summary ? parseFloat(summary.total) : 0
+  const isNegative = total < 0
+
+  // Placeholder cuando carga o hay error
+  const placeholder = isLoading || isError || !summary
+
+  return (
+    <div
+      aria-label="Resumen del dia"
+      className="grid grid-cols-3 divide-x divide-gray-200 rounded-xl border border-gray-200 bg-white overflow-hidden"
+    >
+      {/* Ingresos */}
+      <div className="px-4 py-3 text-center">
+        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+          Ingresos
+        </p>
+        {placeholder ? (
+          <p className="text-base font-bold text-gray-400 mt-1">—</p>
+        ) : (
+          <p className="text-base font-bold text-green-600 mt-1">
+            {formatARS(summary.ingresos)}
+          </p>
+        )}
+        <p className="text-xs text-gray-400 mt-0.5">
+          {placeholder
+            ? '—'
+            : `${summary.ingresos_count} movimiento${summary.ingresos_count !== 1 ? 's' : ''}`}
+        </p>
+      </div>
+
+      {/* Devoluciones */}
+      <div className="px-4 py-3 text-center">
+        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+          Devoluciones
+        </p>
+        {placeholder ? (
+          <p className="text-base font-bold text-gray-400 mt-1">—</p>
+        ) : (
+          <p className="text-base font-bold text-red-600 mt-1">
+            {parseFloat(summary.devoluciones) === 0
+              ? formatARS('0')
+              : formatARS(summary.devoluciones)}
+          </p>
+        )}
+        <p className="text-xs text-gray-400 mt-0.5">
+          {placeholder
+            ? '—'
+            : `${summary.devoluciones_count} reversion${summary.devoluciones_count !== 1 ? 'es' : ''}`}
+        </p>
+      </div>
+
+      {/* Total neto */}
+      <div className="px-4 py-3 text-center">
+        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+          Total neto
+        </p>
+        {isLoading ? (
+          <div className="flex justify-center mt-1">
+            <Spinner size="sm" label="Cargando total..." />
+          </div>
+        ) : placeholder ? (
+          <p className="text-base font-bold text-gray-400 mt-1">—</p>
+        ) : (
+          <p
+            className={[
+              'text-base font-bold mt-1',
+              isNegative ? 'text-red-600' : 'text-gray-900',
+            ].join(' ')}
+          >
+            {formatARS(summary.total)}
+          </p>
+        )}
+        <p className="text-xs text-gray-400 mt-0.5 flex justify-center">
+          {placeholder ? (
+            '—'
+          ) : isNegative ? (
+            <TrendingDown size={14} className="text-red-400" aria-hidden="true" />
+          ) : (
+            <TrendingUp size={14} className="text-green-400" aria-hidden="true" />
+          )}
+        </p>
+      </div>
+    </div>
+  )
 }
 
 // ─── Pagina principal ─────────────────────────────────────────────────────────
@@ -46,11 +145,23 @@ function sumAmounts(amounts: string[]): number {
 export function CashboxPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayLocalDate())
 
-  const { data, isLoading, isError, error, refetch } =
-    useCashMovements(selectedDate)
+  // Resumen: totales correctos sin importar la paginación de la lista.
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+  } = useCashMovementsSummary(selectedDate)
+
+  // Lista de movimientos (paginada, solo la primera página en esta vista).
+  const {
+    data,
+    isLoading: listLoading,
+    isError: listError,
+    error: listErrorObj,
+    refetch,
+  } = useCashMovements(selectedDate)
 
   const movements = data?.results ?? []
-  const total = sumAmounts(movements.map((m) => m.amount))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,60 +198,28 @@ export function CashboxPage() {
           </div>
         </div>
 
-        {/* Tarjeta de totales */}
-        {!isLoading && !isError && movements.length > 0 && (
-          <div
-            aria-label="Total del dia"
-            className={[
-              'rounded-xl border px-5 py-4 flex items-center justify-between',
-              total >= 0
-                ? 'bg-green-50 border-green-200'
-                : 'bg-red-50 border-red-200',
-            ].join(' ')}
-          >
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                Total del dia
-              </p>
-              <p
-                className={[
-                  'text-2xl font-bold mt-0.5',
-                  total >= 0 ? 'text-green-700' : 'text-red-700',
-                ].join(' ')}
-              >
-                {formatARS(String(total))}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {movements.length} movimiento{movements.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-            <span aria-hidden="true">
-              {total >= 0 ? (
-                <TrendingUp size={36} className="text-green-400" />
-              ) : (
-                <TrendingDown size={36} className="text-red-400" />
-              )}
-            </span>
-          </div>
-        )}
+        {/* Tarjeta de totales — siempre visible */}
+        <SummaryCard
+          isLoading={summaryLoading}
+          isError={summaryError}
+          summary={summary}
+        />
 
-        {/* Estado de carga */}
-        {isLoading && (
+        {/* Lista de movimientos */}
+        {listLoading && (
           <div className="flex justify-center py-16">
             <Spinner size="lg" label="Cargando movimientos..." />
           </div>
         )}
 
-        {/* Estado de error */}
-        {isError && !isLoading && (
+        {listError && !listLoading && (
           <ErrorState
-            message={extractApiErrorMessage(error)}
+            message={extractApiErrorMessage(listErrorObj)}
             onRetry={() => void refetch()}
           />
         )}
 
-        {/* Estado vacio */}
-        {!isLoading && !isError && movements.length === 0 && (
+        {!listLoading && !listError && movements.length === 0 && (
           <EmptyState
             icon={<Wallet size={48} strokeWidth={1.5} />}
             title="Sin movimientos"
@@ -148,8 +227,7 @@ export function CashboxPage() {
           />
         )}
 
-        {/* Lista de movimientos */}
-        {!isLoading && !isError && movements.length > 0 && (
+        {!listLoading && !listError && movements.length > 0 && (
           <section aria-label="Movimientos del dia">
             <ul className="space-y-2">
               {movements.map((movement) => {

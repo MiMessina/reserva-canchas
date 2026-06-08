@@ -13,6 +13,7 @@
  *   POST /api/bookings/{id}/cancel/                       → JWT
  *   POST /api/bookings/{id}/complete/                     → operator/admin (JWT)
  *   GET  /api/cash-movements/?date=YYYY-MM-DD             → operator/admin (JWT)
+ *   GET  /api/cash-movements/summary/?date=YYYY-MM-DD    → operator/admin (JWT)
  */
 
 import apiClient, { publicApiClient } from '@/lib/axios'
@@ -22,6 +23,7 @@ import type {
   Booking,
   BookingsFilters,
   CancelBookingPayload,
+  CashDailySummary,
   CashMovement,
   CreateBookingPayload,
 } from '../types'
@@ -94,6 +96,16 @@ export async function getCashMovements(
 ): Promise<PaginatedResponse<CashMovement>> {
   const { data } = await apiClient.get<PaginatedResponse<CashMovement>>(
     '/cash-movements/',
+    { params: date ? { date } : undefined },
+  )
+  return data
+}
+
+export async function getCashMovementsSummary(
+  date?: string,
+): Promise<CashDailySummary> {
+  const { data } = await apiClient.get<CashDailySummary>(
+    '/cash-movements/summary/',
     { params: date ? { date } : undefined },
   )
   return data

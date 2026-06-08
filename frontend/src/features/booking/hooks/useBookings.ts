@@ -30,11 +30,13 @@ import {
   cancelBooking,
   completeBooking,
   getCashMovements,
+  getCashMovementsSummary,
 } from '../services/booking.service'
 import type {
   AvailabilityResponse,
   Booking,
   BookingsFilters,
+  CashDailySummary,
   CashMovement,
   CreateBookingPayload,
 } from '../types'
@@ -56,6 +58,7 @@ export const availabilityKeys = {
 export const cashMovementKeys = {
   all: ['cash-movements'] as const,
   byDate: (date?: string) => ['cash-movements', date ?? 'today'] as const,
+  summary: (date?: string) => ['cash-movements', 'summary', date ?? 'today'] as const,
 }
 
 // ─── Disponibilidad — Query ───────────────────────────────────────────────────
@@ -138,6 +141,7 @@ export function useCancelBooking(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: bookingKeys.all })
       void queryClient.invalidateQueries({ queryKey: availabilityKeys.all })
+      void queryClient.invalidateQueries({ queryKey: cashMovementKeys.all })
     },
   })
 }
@@ -163,5 +167,16 @@ export function useCashMovements(
   return useQuery({
     queryKey: cashMovementKeys.byDate(date),
     queryFn: () => getCashMovements(date),
+  })
+}
+
+// ─── Caja — Resumen diario ────────────────────────────────────────────────────
+
+export function useCashMovementsSummary(
+  date?: string,
+): UseQueryResult<CashDailySummary> {
+  return useQuery({
+    queryKey: cashMovementKeys.summary(date),
+    queryFn: () => getCashMovementsSummary(date),
   })
 }

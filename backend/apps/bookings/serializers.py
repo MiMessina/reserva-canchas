@@ -5,12 +5,13 @@ Los serializers validan estructura y transforman datos; NO gobiernan negocio (RU
 La lógica de negocio (XOR user/guest, concurrencia, transiciones) vive en services.py.
 
 Serializers:
-  BookingPublicSerializer — respuesta pública (create, player). Sin datos de contacto de terceros.
-  BookingStaffSerializer  — respuesta staff (list, retrieve staff, confirm, complete). Con contacto.
-  BookingSerializer       — alias de BookingStaffSerializer para compatibilidad interna.
-  BookingCreateSerializer — escritura (crear reserva, invitado o player).
-  BookingCancelSerializer — escritura (motivo de cancelación).
-  CashMovementSerializer  — lectura de movimientos de caja.
+  BookingPublicSerializer    — respuesta pública (create, player). Sin datos de contacto de terceros.
+  BookingStaffSerializer     — respuesta staff (list, retrieve staff, confirm, complete). Con contacto.
+  BookingSerializer          — alias de BookingStaffSerializer para compatibilidad interna.
+  BookingCreateSerializer    — escritura (crear reserva, invitado o player).
+  BookingCancelSerializer    — escritura (motivo de cancelación).
+  CashMovementSerializer     — lectura de movimientos de caja.
+  CashDailySummarySerializer — lectura del resumen diario de caja (summary endpoint).
 """
 
 from rest_framework import serializers
@@ -203,3 +204,49 @@ class CashMovementSerializer(serializers.ModelSerializer):
             "operator_email",
             "created_at",
         ]
+
+
+class CashDailySummarySerializer(serializers.Serializer):
+    """
+    Serializer de lectura para el resumen diario de caja.
+
+    Devuelve los totales calculados por get_daily_cash_summary() en selectors.py.
+    Solo valida estructura; el cálculo vive en el selector (RULES.md §1).
+
+    Campos:
+      date              — fecha del resumen (YYYY-MM-DD, hora Buenos Aires).
+      total             — neto del día (ingresos + devoluciones).
+      ingresos          — suma de señas/pagos confirmados (amount > 0).
+      devoluciones      — suma de devoluciones por cancelación (amount < 0, negativo).
+      movements_count   — cantidad total de movimientos de caja del día.
+      ingresos_count    — cantidad de movimientos positivos.
+      devoluciones_count— cantidad de movimientos negativos.
+    """
+
+    date = serializers.CharField(
+        help_text="Fecha del resumen en formato YYYY-MM-DD (hora Buenos Aires).",
+    )
+    total = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Neto del día: suma de todos los movimientos (ingresos + devoluciones).",
+    )
+    ingresos = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Suma de movimientos con amount > 0 (señas confirmadas).",
+    )
+    devoluciones = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Suma de movimientos con amount < 0 (devoluciones por cancelación, valor negativo).",
+    )
+    movements_count = serializers.IntegerField(
+        help_text="Cantidad total de movimientos de caja del día.",
+    )
+    ingresos_count = serializers.IntegerField(
+        help_text="Cantidad de movimientos positivos.",
+    )
+    devoluciones_count = serializers.IntegerField(
+        help_text="Cantidad de movimientos negativos.",
+    )
