@@ -72,6 +72,46 @@ class Command(BaseCommand):
             help="Contraseña del usuario tenant_admin inicial.",
         )
 
+    def _upsert_admin(self, schema_name: str, admin_email: str, admin_password: str) -> None:
+        """
+        Crea el usuario tenant_admin si no existe, o actualiza su contraseña y rol
+        si ya existe. Esto hace al comando verdaderamente idempotente: cada arranque
+        del contenedor sincroniza la contraseña con DEMO_ADMIN_PASSWORD del .env.
+        """
+        self.stdout.write(f"  Verificando usuario tenant_admin ({admin_email})...")
+        try:
+            with schema_context(schema_name):
+                User = get_user_model()
+                existing = User.objects.filter(email=admin_email).first()
+                if existing:
+                    existing.set_password(admin_password)
+                    existing.role = "tenant_admin"
+                    existing.is_staff = True
+                    existing.save(update_fields=["password", "role", "is_staff"])
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"  El usuario '{admin_email}' ya existía. "
+                            "Contraseña y rol actualizados."
+                        )
+                    )
+                else:
+                    # FIX R-08: User.USERNAME_FIELD = "email"; no existe campo username.
+                    user = User.objects.create_user(
+                        email=admin_email,
+                        password=admin_password,
+                        role="tenant_admin",
+                        is_staff=True,
+                    )
+                    self.stdout.write(
+                        f"  Usuario tenant_admin creado: {user.email} (id={user.pk})."
+                    )
+        except Exception as exc:
+            raise CommandError(
+                f"Error al crear/actualizar el usuario tenant_admin: {exc}. "
+                "El tenant y el esquema ya existen; podés crear el usuario manualmente "
+                f"con: python manage.py shell (dentro del esquema '{schema_name}')."
+            ) from exc
+
     def handle(self, *args, **options):
         schema_name = options["schema"].lower().strip()
         name = options["name"].strip()
@@ -86,9 +126,11 @@ class Command(BaseCommand):
                 "Usá solo letras, números y guiones bajos."
             )
 
-        # --- Idempotencia: recuperar o crear el registro Tenant ---
+        # --- Idempotencia: si el tenant ya existe, solo actualizar el admin ---
         # Se separa la verificación en dos casos:
-        #   A) El registro del modelo Tenant existe → no tocar nada.
+        #   A) El registro del modelo Tenant existe → no recrear nada, pero sí
+        #      actualizar la contraseña del admin (para que el .env sea la fuente
+        #      de verdad en cada arranque del contenedor).
         #   B) El registro no existe pero el schema PG puede existir (ej: rollback previo)
         #      → recrear solo el registro Django; django-tenants usa auto_create_schema=True
         #      pero si el schema ya existe en PG el CREATE SCHEMA IF NOT EXISTS es no-op.
@@ -96,17 +138,15 @@ class Command(BaseCommand):
         if tenant_qs.exists():
             self.stdout.write(
                 self.style.WARNING(
-                    f"[create_tenant] El tenant con schema '{schema_name}' ya existe. "
-                    "No se realizaron cambios."
+                    f"[init_tenant] El tenant con schema '{schema_name}' ya existe."
                 )
             )
+            self._upsert_admin(schema_name, admin_email, admin_password)
             return
 
         self.stdout.write(f"Creando tenant '{name}' (schema: {schema_name})...")
 
         # --- 1. Crear el Tenant (django-tenants crea el esquema automáticamente) ---
-        # Si el schema PG ya existe (ej: el registro fue eliminado pero el schema quedó),
-        # django-tenants emite CREATE SCHEMA IF NOT EXISTS — seguro y sin pérdida de datos.
         try:
             tenant = Tenant(schema_name=schema_name, name=name)
             tenant.save()  # auto_create_schema=True: crea el esquema al guardar
@@ -117,7 +157,6 @@ class Command(BaseCommand):
 
         # --- 2. Crear el Domain ---
         try:
-            # Verificar si el dominio ya está en uso por otro tenant
             if Domain.objects.filter(domain=domain_name).exists():
                 tenant.delete()
                 raise CommandError(
@@ -153,37 +192,8 @@ class Command(BaseCommand):
 
         self.stdout.write(f"  Migraciones del esquema '{schema_name}' completadas.")
 
-        # --- 4. Crear el usuario tenant_admin dentro del esquema ---
-        self.stdout.write(f"  Creando usuario tenant_admin ({admin_email})...")
-        try:
-            with schema_context(schema_name):
-                User = get_user_model()
-
-                if User.objects.filter(email=admin_email).exists():
-                    self.stdout.write(
-                        self.style.WARNING(
-                            f"  El usuario '{admin_email}' ya existe en el esquema. "
-                            "No se creó uno nuevo."
-                        )
-                    )
-                else:
-                    # FIX R-08: User.USERNAME_FIELD = "email"; no existe campo username.
-                    # create_user recibe email como primer argumento posicional.
-                    user = User.objects.create_user(
-                        email=admin_email,
-                        password=admin_password,
-                        role="tenant_admin",
-                        is_staff=True,
-                    )
-                    self.stdout.write(
-                        f"  Usuario tenant_admin creado: {user.email} (id={user.pk})."
-                    )
-        except Exception as exc:
-            raise CommandError(
-                f"Error al crear el usuario tenant_admin: {exc}. "
-                "El tenant y el esquema ya existen; podés crear el usuario manualmente "
-                f"con: python manage.py shell (dentro del esquema '{schema_name}')."
-            ) from exc
+        # --- 4. Crear el usuario tenant_admin ---
+        self._upsert_admin(schema_name, admin_email, admin_password)
 
         self.stdout.write(
             self.style.SUCCESS(
