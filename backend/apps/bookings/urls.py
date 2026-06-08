@@ -2,7 +2,7 @@
 URLs — app bookings
 
 Registra los ViewSets de Booking y CashMovement con DefaultRouter,
-y la view de disponibilidad como ruta explícita.
+y las views de disponibilidad y dashboard como rutas explícitas.
 
 Rutas generadas:
   GET    /api/bookings/                     — listado (admin/operator)
@@ -12,6 +12,7 @@ Rutas generadas:
   POST   /api/bookings/{id}/cancel/         — cancelar
   POST   /api/bookings/{id}/complete/       — completar (operator/admin)
   GET    /api/cash-movements/               — caja (operator/admin)
+  GET    /api/dashboard/                    — resumen del día (operator/admin)
   GET    /api/courts/{court_id}/availability/?date=YYYY-MM-DD  — grilla (AllowAny)
 
 Incluido en config/urls.py con:
@@ -21,7 +22,7 @@ Incluido en config/urls.py con:
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.bookings.views import AvailabilityView, BookingViewSet, CashMovementViewSet
+from apps.bookings.views import AvailabilityView, BookingViewSet, CashMovementViewSet, DashboardView
 
 router = DefaultRouter()
 router.register(r"bookings", BookingViewSet, basename="booking")
@@ -29,6 +30,7 @@ router.register(r"cash-movements", CashMovementViewSet, basename="cash-movement"
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("dashboard/", DashboardView.as_view(), name="dashboard"),
     path(
         "courts/<int:court_id>/availability/",
         AvailabilityView.as_view(),

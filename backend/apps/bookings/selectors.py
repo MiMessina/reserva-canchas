@@ -13,6 +13,11 @@ Funciones exportadas:
     Agrega totales del día (neto, ingresos, devoluciones) desde CashMovement.
     Usado por CashMovementViewSet.summary (GET /api/cash-movements/summary/).
 
+  get_dashboard_summary() -> dict
+    Resumen del día para el panel de inicio del admin: bookings de hoy por estado,
+    canchas activas y ocupadas ahora, y caja del día.
+    Usado por DashboardView (GET /api/dashboard/).
+
 Zona horaria:
   date_str está en hora Buenos Aires (lo que el jugador ve).
   Los slots se retornan en UTC (ISO 8601) para que el frontend convierta.
@@ -172,4 +177,78 @@ def get_daily_cash_summary(date_str: str) -> dict:
         "movements_count": result["movements_count"] or 0,
         "ingresos_count": result["ingresos_count"] or 0,
         "devoluciones_count": result["devoluciones_count"] or 0,
+    }
+
+
+def get_dashboard_summary() -> dict:
+    """
+    Calcula el resumen del día para el panel de inicio del admin.
+
+    Retorna dict con:
+      bookings_today   — conteos de reservas de hoy por estado (pending_payment,
+                         confirmed, completed, cancelled, total).
+      courts_total     — cantidad de canchas activas en el tenant.
+      courts_occupied_now — canchas con booking CONFIRMED que cubren el momento
+                         actual (start_dt <= now_utc < end_dt), contadas de forma
+                         distinta por court.
+      cashbox_today    — resultado de get_daily_cash_summary() para hoy en BA.
+
+    No recibe parámetros: "hoy" se calcula en el momento de la llamada
+    usando America/Argentina/Buenos_Aires para la fecha y UTC para los rangos.
+
+    La lógica de lectura vive aquí (selector); ninguna regla de negocio.
+    """
+    now_utc = datetime.now(UTC)
+    today_ba_str = now_utc.astimezone(BUENOS_AIRES).date().isoformat()
+
+    # Rango completo del día de hoy en BA → convertido a UTC para filtrar start_dt
+    today_ba = now_utc.astimezone(BUENOS_AIRES).date()
+    day_start_ba = datetime(today_ba.year, today_ba.month, today_ba.day, 0, 0, 0, tzinfo=BUENOS_AIRES)
+    day_end_ba = datetime(today_ba.year, today_ba.month, today_ba.day, 23, 59, 59, tzinfo=BUENOS_AIRES)
+    day_start_utc = day_start_ba.astimezone(UTC)
+    day_end_utc = day_end_ba.astimezone(UTC)
+
+    # Conteos de reservas de hoy por estado (una sola query con anotaciones condicionales)
+    counts = Booking.objects.filter(
+        is_active=True,
+        start_dt__gte=day_start_utc,
+        start_dt__lte=day_end_utc,
+    ).aggregate(
+        pending_payment=Count("id", filter=Q(status=Booking.Status.PENDING_PAYMENT)),
+        confirmed=Count("id", filter=Q(status=Booking.Status.CONFIRMED)),
+        completed=Count("id", filter=Q(status=Booking.Status.COMPLETED)),
+        cancelled=Count("id", filter=Q(status=Booking.Status.CANCELLED)),
+        total=Count("id"),
+    )
+
+    # Canchas con booking CONFIRMED que cubren right now (solapamiento [start, end))
+    courts_occupied_now = (
+        Booking.objects.filter(
+            is_active=True,
+            status=Booking.Status.CONFIRMED,
+            start_dt__lte=now_utc,
+            end_dt__gt=now_utc,
+        )
+        .values("court")
+        .distinct()
+        .count()
+    )
+
+    # Total de canchas activas en el tenant
+    courts_total = Court.objects.filter(is_active=True).count()
+
+    # Reutilizar selector de caja (no duplicar lógica — RULES.md §1)
+    cashbox_today = get_daily_cash_summary(today_ba_str)
+
+    return {
+        "bookings_today": {
+            "pending_payment": counts["pending_payment"] or 0,
+            "confirmed": counts["confirmed"] or 0,
+            "completed": counts["completed"] or 0,
+            "cancelled": counts["cancelled"] or 0,
+            "total": counts["total"] or 0,
+        },
+        "courts_total": courts_total,
+        "courts_occupied_now": courts_occupied_now,
+        "cashbox_today": cashbox_today,
     }

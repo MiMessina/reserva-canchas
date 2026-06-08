@@ -5,13 +5,15 @@ Los serializers validan estructura y transforman datos; NO gobiernan negocio (RU
 La lógica de negocio (XOR user/guest, concurrencia, transiciones) vive en services.py.
 
 Serializers:
-  BookingPublicSerializer    — respuesta pública (create, player). Sin datos de contacto de terceros.
-  BookingStaffSerializer     — respuesta staff (list, retrieve staff, confirm, complete). Con contacto.
-  BookingSerializer          — alias de BookingStaffSerializer para compatibilidad interna.
-  BookingCreateSerializer    — escritura (crear reserva, invitado o player).
-  BookingCancelSerializer    — escritura (motivo de cancelación).
-  CashMovementSerializer     — lectura de movimientos de caja.
-  CashDailySummarySerializer — lectura del resumen diario de caja (summary endpoint).
+  BookingPublicSerializer      — respuesta pública (create, player). Sin datos de contacto de terceros.
+  BookingStaffSerializer       — respuesta staff (list, retrieve staff, confirm, complete). Con contacto.
+  BookingSerializer            — alias de BookingStaffSerializer para compatibilidad interna.
+  BookingCreateSerializer      — escritura (crear reserva, invitado o player).
+  BookingCancelSerializer      — escritura (motivo de cancelación).
+  CashMovementSerializer       — lectura de movimientos de caja.
+  CashDailySummarySerializer   — lectura del resumen diario de caja (summary endpoint).
+  BookingsTodaySummarySerializer — lectura de conteos de reservas de hoy por estado (dashboard).
+  DashboardSerializer          — lectura del resumen del día para el panel de inicio (dashboard).
 """
 
 from rest_framework import serializers
@@ -249,4 +251,56 @@ class CashDailySummarySerializer(serializers.Serializer):
     )
     devoluciones_count = serializers.IntegerField(
         help_text="Cantidad de movimientos negativos.",
+    )
+
+
+class BookingsTodaySummarySerializer(serializers.Serializer):
+    """
+    Conteos de reservas de hoy por estado.
+
+    Parte del payload del DashboardSerializer.
+    Todos los campos son enteros >= 0; total es la suma de los 4 estados.
+    """
+
+    pending_payment = serializers.IntegerField(
+        help_text="Reservas del día en estado PENDING_PAYMENT.",
+    )
+    confirmed = serializers.IntegerField(
+        help_text="Reservas del día en estado CONFIRMED.",
+    )
+    completed = serializers.IntegerField(
+        help_text="Reservas del día en estado COMPLETED.",
+    )
+    cancelled = serializers.IntegerField(
+        help_text="Reservas del día en estado CANCELLED.",
+    )
+    total = serializers.IntegerField(
+        help_text="Suma de todos los estados (pending + confirmed + completed + cancelled).",
+    )
+
+
+class DashboardSerializer(serializers.Serializer):
+    """
+    Resumen del día para el panel de inicio del admin.
+
+    Campos:
+      bookings_today    — conteos de reservas de hoy por estado.
+      courts_total      — cantidad de canchas activas del tenant.
+      courts_occupied_now — canchas con booking CONFIRMED que cubren el momento actual.
+      cashbox_today     — resumen diario de caja (misma estructura que /api/cash-movements/summary/).
+
+    Solo lectura; todos los datos los provee get_dashboard_summary() (selectors.py).
+    """
+
+    bookings_today = BookingsTodaySummarySerializer(
+        help_text="Conteos de reservas del día por estado.",
+    )
+    courts_total = serializers.IntegerField(
+        help_text="Cantidad de canchas activas en el tenant.",
+    )
+    courts_occupied_now = serializers.IntegerField(
+        help_text="Canchas con reserva CONFIRMED que cubren el momento actual.",
+    )
+    cashbox_today = CashDailySummarySerializer(
+        help_text="Resumen de caja del día: neto, ingresos, devoluciones y conteos.",
     )

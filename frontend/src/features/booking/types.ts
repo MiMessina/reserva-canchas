@@ -110,3 +110,20 @@ export interface CashDailySummary {
   ingresos_count: number
   devoluciones_count: number
 }
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+export interface BookingsTodaySummary {
+  pending_payment: number
+  confirmed: number
+  completed: number
+  cancelled: number
+  total: number
+}
+
+export interface DashboardSummary {
+  bookings_today: BookingsTodaySummary
+  courts_total: number
+  courts_occupied_now: number
+  cashbox_today: CashDailySummary
+}

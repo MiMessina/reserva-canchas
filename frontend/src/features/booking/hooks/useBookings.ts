@@ -31,6 +31,7 @@ import {
   completeBooking,
   getCashMovements,
   getCashMovementsSummary,
+  getDashboardSummary,
 } from '../services/booking.service'
 import type {
   AvailabilityResponse,
@@ -39,6 +40,7 @@ import type {
   CashDailySummary,
   CashMovement,
   CreateBookingPayload,
+  DashboardSummary,
 } from '../types'
 import type { PaginatedResponse } from '@/types/api'
 
@@ -178,5 +180,20 @@ export function useCashMovementsSummary(
   return useQuery({
     queryKey: cashMovementKeys.summary(date),
     queryFn: () => getCashMovementsSummary(date),
+  })
+}
+
+// ─── Dashboard — Query ────────────────────────────────────────────────────────
+
+export const dashboardKeys = {
+  summary: () => ['dashboard', 'summary'] as const,
+}
+
+export function useDashboardSummary(): UseQueryResult<DashboardSummary> {
+  return useQuery({
+    queryKey: dashboardKeys.summary(),
+    queryFn: getDashboardSummary,
+    // Refrescar cada 60 segundos para que "ocupadas ahora" se mantenga actualizado
+    refetchInterval: 60_000,
   })
 }

@@ -11,6 +11,7 @@ Endpoints registrados en apps/bookings/urls.py:
   POST   /api/bookings/{id}/cancel/         — cancelar (autenticado; jugador solo la suya)
   POST   /api/bookings/{id}/complete/       — completar (operator/admin)
   GET    /api/cash-movements/               — caja (operator/admin; filtro ?date=YYYY-MM-DD)
+  GET    /api/dashboard/                    — resumen del día para el panel de inicio (operator/admin)
   GET    /api/courts/{court_id}/availability/?date=YYYY-MM-DD  — grilla (AllowAny)
 
 Reglas:
@@ -33,7 +34,7 @@ from rest_framework.views import APIView
 
 from apps.bookings.models import Booking, CashMovement
 from apps.bookings.permissions import IsOperatorOrAdmin
-from apps.bookings.selectors import get_availability, get_daily_cash_summary
+from apps.bookings.selectors import get_availability, get_daily_cash_summary, get_dashboard_summary
 from apps.bookings.serializers import (
     BookingCancelSerializer,
     BookingCreateSerializer,
@@ -42,6 +43,7 @@ from apps.bookings.serializers import (
     BookingStaffSerializer,
     CashDailySummarySerializer,
     CashMovementSerializer,
+    DashboardSerializer,
 )
 from apps.bookings.services import (
     cancel_booking,
@@ -411,6 +413,30 @@ class CashMovementViewSet(viewsets.GenericViewSet):
             )
 
         return Response(CashDailySummarySerializer(data).data)
+
+
+class DashboardView(APIView):
+    """
+    GET /api/dashboard/
+    Resumen del día: bookings de hoy por estado, canchas y caja.
+    Solo operator o admin.
+    """
+
+    permission_classes = [IsAuthenticated, IsOperatorOrAdmin]
+
+    @extend_schema(
+        summary="Resumen del dashboard (hoy)",
+        description=(
+            "Retorna el resumen del día: reservas por estado, "
+            "canchas activas y ocupadas ahora, y caja del día. "
+            "Solo operator o admin."
+        ),
+        tags=["dashboard"],
+        responses={200: DashboardSerializer},
+    )
+    def get(self, request):
+        data = get_dashboard_summary()
+        return Response(DashboardSerializer(data).data)
 
 
 class AvailabilityView(APIView):

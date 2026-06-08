@@ -26,6 +26,7 @@ import type {
   CashDailySummary,
   CashMovement,
   CreateBookingPayload,
+  DashboardSummary,
 } from '../types'
 
 // ─── Disponibilidad ───────────────────────────────────────────────────────────
@@ -108,5 +109,12 @@ export async function getCashMovementsSummary(
     '/cash-movements/summary/',
     { params: date ? { date } : undefined },
   )
+  return data
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  const { data } = await apiClient.get<DashboardSummary>('/dashboard/')
   return data
 }
