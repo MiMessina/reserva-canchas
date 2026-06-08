@@ -80,8 +80,6 @@ class BookingViewSet(viewsets.GenericViewSet):
       CONFIRMED → COMPLETED. Solo operator/admin.
     """
 
-    pagination_class = None  # heredará la paginación global de DRF settings
-
     # -----------------------------------------------------------------------
     # Helpers internos
     # -----------------------------------------------------------------------

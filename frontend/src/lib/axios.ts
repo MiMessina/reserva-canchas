@@ -42,9 +42,22 @@ export function clearTokens(): void {
   localStorage.removeItem(REFRESH_KEY)
 }
 
-// ─── Instancia Axios ──────────────────────────────────────────────────────────
+// ─── Instancia Axios (autenticada) ───────────────────────────────────────────
 
 const apiClient: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api',
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+  timeout: 15_000,
+})
+
+// ─── Instancia Axios pública (sin JWT) ───────────────────────────────────────
+// Usada por la grilla pública de reservas (/booking). No adjunta ningún token
+// aunque el usuario esté logueado, para que el backend trate la request como
+// invitado (guest_name + guest_phone) y no rechace por el XOR de ADR-008.
+export const publicApiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',

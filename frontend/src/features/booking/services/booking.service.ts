@@ -15,7 +15,7 @@
  *   GET  /api/cash-movements/?date=YYYY-MM-DD             → operator/admin (JWT)
  */
 
-import apiClient from '@/lib/axios'
+import apiClient, { publicApiClient } from '@/lib/axios'
 import type { PaginatedResponse } from '@/types/api'
 import type {
   AvailabilityResponse,
@@ -59,7 +59,9 @@ export async function getBookings(
 export async function createBooking(
   payload: CreateBookingPayload,
 ): Promise<Booking> {
-  const { data } = await apiClient.post<Booking>('/bookings/', payload)
+  // publicApiClient: no adjunta JWT aunque el usuario esté logueado.
+  // La grilla pública siempre crea reservas de invitado (ADR-008 XOR rule).
+  const { data } = await publicApiClient.post<Booking>('/bookings/', payload)
   return data
 }
 
