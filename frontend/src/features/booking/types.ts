@@ -84,6 +84,7 @@ export interface BookingsFilters {
   status?: BookingStatus
   date_from?: string          // YYYY-MM-DD
   date_to?: string            // YYYY-MM-DD
+  page?: number
 }
 
 // ─── Caja diaria ─────────────────────────────────────────────────────────────
@@ -109,6 +110,32 @@ export interface CashDailySummary {
   movements_count: number
   ingresos_count: number
   devoluciones_count: number
+}
+
+// ─── Grilla multi-cancha ──────────────────────────────────────────────────────
+
+export type SlotStatus = 'AVAILABLE' | 'PENDING_PAYMENT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+
+export interface DailyGridSlot {
+  start_dt: string        // ISO 8601 UTC
+  end_dt: string          // ISO 8601 UTC
+  status: SlotStatus
+  booking_id: number | null
+  guest_name: string | null
+  price: string | null    // decimal string
+}
+
+export interface DailyGridCourt {
+  id: number
+  name: string
+  type: string
+  slot_duration_minutes: number
+  slots: DailyGridSlot[]
+}
+
+export interface DailyGridResponse {
+  date: string            // YYYY-MM-DD en hora BA
+  courts: DailyGridCourt[]
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────

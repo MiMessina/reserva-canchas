@@ -31,6 +31,7 @@ import {
   completeBooking,
   getCashMovements,
   getCashMovementsSummary,
+  getDailyGrid,
   getDashboardSummary,
 } from '../services/booking.service'
 import type {
@@ -40,6 +41,7 @@ import type {
   CashDailySummary,
   CashMovement,
   CreateBookingPayload,
+  DailyGridResponse,
   DashboardSummary,
 } from '../types'
 import type { PaginatedResponse } from '@/types/api'
@@ -180,6 +182,20 @@ export function useCashMovementsSummary(
   return useQuery({
     queryKey: cashMovementKeys.summary(date),
     queryFn: () => getCashMovementsSummary(date),
+  })
+}
+
+// ─── Grilla multi-cancha — Query ──────────────────────────────────────────────
+
+export const dailyGridKeys = {
+  grid: (date: string) => ['daily-grid', date] as const,
+}
+
+export function useDailyGrid(date: string): UseQueryResult<DailyGridResponse> {
+  return useQuery({
+    queryKey: dailyGridKeys.grid(date),
+    queryFn: () => getDailyGrid(date),
+    enabled: date.length === 10,
   })
 }
 

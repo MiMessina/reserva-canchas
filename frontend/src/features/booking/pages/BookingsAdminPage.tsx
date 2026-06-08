@@ -388,6 +388,7 @@ export function BookingsAdminPage() {
     date_from: today,
     date_to: today,
   })
+  const [page, setPage] = useState(1)
   const [bookingToCancel, setBookingToCancel] = useState<Booking | null>(null)
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
   const [completingId, setCompletingId] = useState<number | null>(null)
@@ -395,7 +396,7 @@ export function BookingsAdminPage() {
   const { data: courtsData } = useCourts({ is_active: true })
   const courts = courtsData?.results ?? []
 
-  const { data, isLoading, isError, error, refetch } = useBookings(filters)
+  const { data, isLoading, isError, error, refetch } = useBookings({ ...filters, page })
   const bookings = data?.results ?? []
 
   const confirmBooking = useConfirmBooking()
@@ -424,6 +425,7 @@ export function BookingsAdminPage() {
     value: BookingsFilters[K],
   ) {
     setFilters((prev) => ({ ...prev, [key]: value }))
+    setPage(1)
   }
 
   return (
@@ -550,13 +552,6 @@ export function BookingsAdminPage() {
           </div>
         </section>
 
-        {/* Contador */}
-        {!isLoading && !isError && (
-          <p className="text-sm text-gray-500">
-            {data?.count ?? 0} reserva{(data?.count ?? 0) !== 1 ? 's' : ''}
-          </p>
-        )}
-
         {/* Estados de carga / error / vacio */}
         {isLoading && (
           <div className="flex justify-center py-16">
@@ -628,6 +623,33 @@ export function BookingsAdminPage() {
               </table>
             </div>
           </>
+        )}
+
+        {/* Paginacion */}
+        {!isLoading && !isError && (data?.count ?? 0) > 0 && (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-gray-500">
+              Pagina {page} · {data?.count ?? 0} reserva{(data?.count ?? 0) !== 1 ? 's' : ''} en total
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => p - 1)}
+                disabled={!data?.previous}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              >
+                Anterior
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!data?.next}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
         )}
       </main>
 

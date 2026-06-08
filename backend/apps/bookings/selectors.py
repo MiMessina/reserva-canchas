@@ -18,6 +18,11 @@ Funciones exportadas:
     canchas activas y ocupadas ahora, y caja del día.
     Usado por DashboardView (GET /api/dashboard/).
 
+  get_daily_grid(date_str) -> dict
+    Grilla multi-cancha del día para el panel de administración.
+    Retorna todas las canchas activas con sus slots y el estado de cada uno.
+    Usado por DailyGridView (GET /api/bookings/daily-grid/).
+
 Zona horaria:
   date_str está en hora Buenos Aires (lo que el jugador ve).
   Los slots se retornan en UTC (ISO 8601) para que el frontend convierta.
@@ -251,4 +256,153 @@ def get_dashboard_summary() -> dict:
         "courts_total": courts_total,
         "courts_occupied_now": courts_occupied_now,
         "cashbox_today": cashbox_today,
+    }
+
+
+def get_daily_grid(date_str: str) -> dict:
+    """
+    Calcula la grilla multi-cancha del día para el panel de administración.
+
+    A diferencia de get_availability(), este selector:
+      - Incluye TODAS las canchas activas (no solo una).
+      - NO filtra slots pasados (el admin ve el día completo).
+      - Incluye el status real de cada slot (AVAILABLE, PENDING_PAYMENT, CONFIRMED, COMPLETED).
+      - Incluye booking_id, guest_name y price cuando hay reserva.
+      - Considera PENDING_PAYMENT, CONFIRMED y COMPLETED como ocupados
+        (CANCELLED libera el slot).
+
+    Parámetros:
+      date_str — fecha en formato "YYYY-MM-DD" en hora Buenos Aires.
+
+    Retorna dict con:
+      date   — date_str original.
+      courts — lista de canchas activas con sus slots del día.
+
+    Lanza ValueError si date_str no es un formato de fecha válido.
+    """
+    # Lanza ValueError si el formato es inválido (capturado en la view)
+    date = date_type.fromisoformat(date_str)
+    weekday = date.weekday()  # 0=lunes, coincide con ScheduleBlock.Weekday
+
+    # Rango completo del día en Buenos Aires convertido a UTC
+    day_start_ba = datetime(date.year, date.month, date.day, 0, 0, 0, tzinfo=BUENOS_AIRES)
+    day_end_ba = datetime(date.year, date.month, date.day, 23, 59, 59, tzinfo=BUENOS_AIRES)
+    day_start_utc = day_start_ba.astimezone(UTC)
+    day_end_utc = day_end_ba.astimezone(UTC)
+
+    courts = Court.objects.filter(is_active=True).order_by("name")
+
+    # Prefetch bloques horarios activos del weekday para todas las canchas
+    # (una sola query en lugar de N+1)
+    blocks_by_court: dict[int, list] = {}
+    all_blocks = ScheduleBlock.objects.filter(
+        court__in=courts,
+        weekday=weekday,
+        is_active=True,
+    ).order_by("court_id", "open_time")
+    for block in all_blocks:
+        blocks_by_court.setdefault(block.court_id, []).append(block)
+
+    # Prefetch reservas activas del día para todas las canchas de una sola vez
+    # Incluimos PENDING_PAYMENT, CONFIRMED y COMPLETED (CANCELLED libera el slot)
+    bookings_qs = (
+        Booking.objects.filter(
+            court__in=courts,
+            is_active=True,
+            status__in=[
+                Booking.Status.PENDING_PAYMENT,
+                Booking.Status.CONFIRMED,
+                Booking.Status.COMPLETED,
+            ],
+            start_dt__gte=day_start_utc,
+            start_dt__lte=day_end_utc,
+        )
+        .values(
+            "id",
+            "court_id",
+            "start_dt",
+            "end_dt",
+            "status",
+            "guest_name",
+            "price",
+            "user_id",
+            "user__email",
+            "user__first_name",
+            "user__last_name",
+        )
+    )
+
+    bookings_by_court: dict[int, list] = {}
+    for booking in bookings_qs:
+        bookings_by_court.setdefault(booking["court_id"], []).append(booking)
+
+    courts_data = []
+    for court in courts:
+        court_blocks = blocks_by_court.get(court.pk, [])
+        court_bookings = bookings_by_court.get(court.pk, [])
+
+        duration = timedelta(minutes=court.slot_duration_minutes)
+        slots = []
+
+        for block in court_blocks:
+            current_ba = datetime.combine(date, block.open_time, tzinfo=BUENOS_AIRES)
+            block_end_ba = datetime.combine(date, block.close_time, tzinfo=BUENOS_AIRES)
+
+            while current_ba + duration <= block_end_ba:
+                end_ba = current_ba + duration
+                start_utc = current_ba.astimezone(UTC)
+                end_utc = end_ba.astimezone(UTC)
+
+                # Buscar reserva solapada: start_dt < end_utc AND end_dt > start_utc
+                overlapping = next(
+                    (
+                        b for b in court_bookings
+                        if b["start_dt"] < end_utc and b["end_dt"] > start_utc
+                    ),
+                    None,
+                )
+
+                if overlapping:
+                    # Determinar guest_name: campo directo o email del usuario
+                    if overlapping["guest_name"]:
+                        guest_display = overlapping["guest_name"]
+                    elif overlapping["user_id"]:
+                        first = overlapping["user__first_name"] or ""
+                        last = overlapping["user__last_name"] or ""
+                        full = f"{first} {last}".strip()
+                        guest_display = full if full else overlapping["user__email"]
+                    else:
+                        guest_display = None
+
+                    slots.append({
+                        "start_dt": start_utc.isoformat(),
+                        "end_dt": end_utc.isoformat(),
+                        "status": overlapping["status"],
+                        "booking_id": overlapping["id"],
+                        "guest_name": guest_display,
+                        "price": str(overlapping["price"]) if overlapping["price"] is not None else None,
+                    })
+                else:
+                    slots.append({
+                        "start_dt": start_utc.isoformat(),
+                        "end_dt": end_utc.isoformat(),
+                        "status": "AVAILABLE",
+                        "booking_id": None,
+                        "guest_name": None,
+                        "price": None,
+                    })
+
+                current_ba = end_ba
+
+        courts_data.append({
+            "id": court.pk,
+            "name": court.name,
+            "type": court.court_type,
+            "slot_duration_minutes": court.slot_duration_minutes,
+            "slots": slots,
+        })
+
+    return {
+        "date": date_str,
+        "courts": courts_data,
     }

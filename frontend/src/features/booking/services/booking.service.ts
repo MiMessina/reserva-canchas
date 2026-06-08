@@ -26,6 +26,7 @@ import type {
   CashDailySummary,
   CashMovement,
   CreateBookingPayload,
+  DailyGridResponse,
   DashboardSummary,
 } from '../types'
 
@@ -110,6 +111,15 @@ export async function getCashMovementsSummary(
     { params: date ? { date } : undefined },
   )
   return data
+}
+
+// ─── Grilla multi-cancha ─────────────────────────────────────────────────────
+
+export async function getDailyGrid(date: string): Promise<DailyGridResponse> {
+  const response = await apiClient.get<DailyGridResponse>('/bookings/daily-grid/', {
+    params: { date },
+  })
+  return response.data
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────

@@ -15,6 +15,8 @@
  *   /booking            → BookingPage (grilla publica de turnos — sin auth)
  *   /admin/bookings     → BookingsAdminPage (panel operator/admin — JWT)
  *   /admin/cashbox      → CashboxPage (caja diaria — JWT)
+ *   /admin/grid         → DailyGridPage (grilla multi-cancha — JWT)
+ *   /admin/operators    → OperatorsPage (gestion de operadores — tenant_admin)
  *
  * Layout:
  *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
@@ -32,6 +34,8 @@ import { CourtDetailPage } from '@/features/courts/pages/CourtDetailPage'
 import { BookingPage } from '@/features/booking/pages/BookingPage'
 import { BookingsAdminPage } from '@/features/booking/pages/BookingsAdminPage'
 import { CashboxPage } from '@/features/booking/pages/CashboxPage'
+import { DailyGridPage } from '@/features/booking/pages/DailyGridPage'
+import { OperatorsPage } from '@/features/users/pages/OperatorsPage'
 
 const router = createBrowserRouter([
   {
@@ -72,6 +76,14 @@ const router = createBrowserRouter([
           {
             path: '/admin/cashbox',
             element: <CashboxPage />,
+          },
+          {
+            path: '/admin/grid',
+            element: <DailyGridPage />,
+          },
+          {
+            path: '/admin/operators',
+            element: <OperatorsPage />,
           },
         ],
       },

@@ -1,7 +1,6 @@
 """
 Serializers — app users
 
-Sprint 0: serializers base + autenticación por email (FIX R-08).
 Los serializers validan estructura, no gobiernan negocio (RULES.md).
 
 FIX R-08: EmailTokenObtainPairSerializer reemplaza al TokenObtainPairSerializer
@@ -9,10 +8,9 @@ por defecto de SimpleJWT, que espera `username`. El contrato del login queda:
   POST /api/auth/login/  body: {"email": "...", "password": "..."}
                          response: {"access": "...", "refresh": "..."}
 
-Expansión Sprint 1+:
-  - Serializer de registro de player.
-  - Serializer de perfil (ver/editar datos propios).
-  - Serializer de creación de operator (solo tenant_admin).
+Serializers de escritura:
+  UserCreateSerializer — crea un usuario con role=OPERATOR (forzado en create()).
+  UserUpdateSerializer — edita first_name, last_name, email, password (opcional).
 """
 
 from rest_framework import serializers
@@ -83,8 +81,6 @@ class UserMeSerializer(serializers.ModelSerializer):
     """
     Serializer para el endpoint GET /api/users/me/ (perfil propio).
     No expone password. El role no es editable por el usuario.
-
-    Sprint 0: definido. El endpoint se construye en Sprint 1+.
     """
 
     class Meta:
@@ -100,3 +96,67 @@ class UserMeSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "role", "is_active", "created_at", "updated_at"]
+
+
+# ---------------------------------------------------------------------------
+# Serializers de escritura de operadores (Sprint 1+)
+# ---------------------------------------------------------------------------
+
+class UserCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer para POST /api/users/ — crear un operador.
+
+    El role se fuerza a OPERATOR en create() independientemente de lo que
+    envíe el cliente. El password se hashea con set_password().
+    La respuesta del endpoint usa UserSerializer (sin password).
+    """
+
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={"input_type": "password"},
+        min_length=8,
+    )
+
+    class Meta:
+        model = User
+        fields = ["email", "password", "first_name", "last_name"]
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        # El role se fuerza a OPERATOR; nunca se puede crear un tenant_admin
+        # desde este endpoint (RBAC.md §4).
+        user = User(role=User.Role.OPERATOR, **validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer para PATCH /api/users/{id}/ — editar un operador.
+
+    Campos editables: first_name, last_name, email, password (opcional).
+    El role y is_active no son editables desde este endpoint.
+    Si se pasa password, se hashea correctamente con set_password().
+    """
+
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        style={"input_type": "password"},
+        min_length=8,
+    )
+
+    class Meta:
+        model = User
+        fields = ["email", "first_name", "last_name", "password"]
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance

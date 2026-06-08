@@ -20,6 +20,7 @@ import {
   CalendarDays,
   TrendingUp,
   TrendingDown,
+  Download,
 } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
@@ -27,6 +28,7 @@ import { ErrorState } from '@/components/ErrorState'
 import { useCashMovements, useCashMovementsSummary } from '../hooks/useBookings'
 import { formatTimeBA, toLocalDateStringBA } from '@/lib/datetime'
 import { extractApiErrorMessage } from '@/lib/apiError'
+import apiClient from '@/lib/axios'
 import type { CashDailySummary } from '../types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -145,6 +147,25 @@ function SummaryCard({ isLoading, isError, summary }: SummaryCardProps) {
 export function CashboxPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayLocalDate())
 
+  async function handleExportCSV() {
+    try {
+      const response = await apiClient.get('/cash-movements/export/', {
+        params: { date: selectedDate },
+        responseType: 'blob',
+      })
+      const url = URL.createObjectURL(response.data as Blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `caja_${selectedDate}.csv`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Error al exportar CSV:', err)
+    }
+  }
+
   // Resumen: totales correctos sin importar la paginación de la lista.
   const {
     data: summary,
@@ -170,6 +191,14 @@ export function CashboxPage() {
         <div className="max-w-lg mx-auto flex items-center gap-2">
           <Wallet size={20} className="text-brand-600" aria-hidden="true" />
           <h1 className="text-base font-semibold text-gray-900">Caja diaria</h1>
+          <button
+            type="button"
+            onClick={() => void handleExportCSV()}
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-brand-700 hover:bg-brand-50 border border-gray-200 transition-colors"
+          >
+            <Download size={15} aria-hidden="true" />
+            Exportar CSV
+          </button>
         </div>
       </header>
 

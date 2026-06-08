@@ -11,7 +11,9 @@ Endpoints registrados en apps/bookings/urls.py:
   POST   /api/bookings/{id}/cancel/         — cancelar (autenticado; jugador solo la suya)
   POST   /api/bookings/{id}/complete/       — completar (operator/admin)
   GET    /api/cash-movements/               — caja (operator/admin; filtro ?date=YYYY-MM-DD)
+  GET    /api/cash-movements/export/        — exportar caja en CSV (operator/admin)
   GET    /api/dashboard/                    — resumen del día para el panel de inicio (operator/admin)
+  GET    /api/bookings/daily-grid/          — grilla multi-cancha del día (operator/admin)
   GET    /api/courts/{court_id}/availability/?date=YYYY-MM-DD  — grilla (AllowAny)
 
 Reglas:
@@ -22,8 +24,10 @@ Reglas:
   - La concurrencia la garantiza el service con select_for_update().
 """
 
+import csv
 import logging
 
+from django.http import HttpResponse
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -34,7 +38,7 @@ from rest_framework.views import APIView
 
 from apps.bookings.models import Booking, CashMovement
 from apps.bookings.permissions import IsOperatorOrAdmin
-from apps.bookings.selectors import get_availability, get_daily_cash_summary, get_dashboard_summary
+from apps.bookings.selectors import get_availability, get_daily_cash_summary, get_daily_grid, get_dashboard_summary
 from apps.bookings.serializers import (
     BookingCancelSerializer,
     BookingCreateSerializer,
@@ -414,6 +418,100 @@ class CashMovementViewSet(viewsets.GenericViewSet):
 
         return Response(CashDailySummarySerializer(data).data)
 
+    @extend_schema(
+        summary="Exportar movimientos de caja en CSV",
+        description=(
+            "Descarga un archivo CSV con los movimientos de caja del día. "
+            "Usa el mismo filtro por fecha que el listado (?date=YYYY-MM-DD). "
+            "Si no se pasa date, usa la fecha de hoy en hora Buenos Aires. "
+            "Solo operator o admin."
+        ),
+        parameters=[
+            OpenApiParameter("date", type=str, description="Filtrar por fecha (YYYY-MM-DD)."),
+        ],
+        tags=["cashbox"],
+        responses={200: None},
+    )
+    @action(detail=False, methods=["get"], url_path="export")
+    def export(self, request):
+        from datetime import date as date_type, datetime
+        from zoneinfo import ZoneInfo
+
+        BUENOS_AIRES = ZoneInfo("America/Argentina/Buenos_Aires")
+
+        date_str = request.query_params.get("date")
+        if not date_str:
+            date_str = datetime.now(BUENOS_AIRES).date().isoformat()
+
+        try:
+            day = date_type.fromisoformat(date_str)
+        except ValueError:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Formato de fecha inválido. Usar YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        day_start = datetime(day.year, day.month, day.day, 0, 0, tzinfo=BUENOS_AIRES)
+        day_end = datetime(day.year, day.month, day.day, 23, 59, 59, 999999, tzinfo=BUENOS_AIRES)
+
+        qs = CashMovement.objects.select_related(
+            "booking", "booking__court", "booking__user", "operator"
+        ).filter(
+            booking__is_active=True,
+            created_at__gte=day_start,
+            created_at__lte=day_end,
+        )
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="caja_{date_str}.csv"'
+        # BOM UTF-8 para compatibilidad con Excel
+        response.write("﻿")
+
+        writer = csv.writer(response)
+        writer.writerow(["Fecha", "Cancha", "Jugador", "Monto", "Tipo", "Notas"])
+
+        for movement in qs:
+            # Fecha en hora Buenos Aires
+            fecha_ba = movement.created_at.astimezone(BUENOS_AIRES)
+            fecha_str = fecha_ba.strftime("%d/%m/%Y %H:%M")
+
+            # Cancha
+            cancha = movement.booking.court.name if movement.booking_id else "—"
+
+            # Jugador: guest_name > user.email > "—"
+            booking = movement.booking
+            if booking.guest_name:
+                jugador = booking.guest_name
+            elif booking.user_id and booking.user:
+                jugador = booking.user.email
+            else:
+                jugador = "—"
+
+            # Monto formateado como $1.234,56
+            amount = movement.amount
+            # Separar parte entera y decimal
+            amount_abs = abs(amount)
+            int_part = int(amount_abs)
+            dec_part = int(round((amount_abs - int_part) * 100))
+            # Formatear parte entera con separador de miles "."
+            int_str = f"{int_part:,}".replace(",", ".")
+            monto_str = f"${int_str},{dec_part:02d}"
+
+            # Tipo
+            tipo = "Ingreso" if amount > 0 else "Devolucion"
+
+            # Notas
+            notas = movement.notes or ""
+
+            writer.writerow([fecha_str, cancha, jugador, monto_str, tipo, notas])
+
+        return response
+
 
 class DashboardView(APIView):
     """
@@ -437,6 +535,62 @@ class DashboardView(APIView):
     def get(self, request):
         data = get_dashboard_summary()
         return Response(DashboardSerializer(data).data)
+
+
+class DailyGridView(APIView):
+    """
+    Vista de grilla multi-cancha del día para el panel de administración.
+
+    GET /api/bookings/daily-grid/?date=YYYY-MM-DD
+
+    Solo operator o admin. Parámetro date opcional (default: hoy en BA).
+    Retorna todas las canchas activas con sus slots del día, incluyendo estado
+    de cada slot (AVAILABLE, PENDING_PAYMENT, CONFIRMED, COMPLETED) y datos
+    de la reserva si existe.
+    """
+
+    permission_classes = [IsAuthenticated, IsOperatorOrAdmin]
+
+    @extend_schema(
+        summary="Grilla multi-cancha del día (panel admin)",
+        description=(
+            "Retorna todas las canchas activas con sus slots del día. "
+            "Cada slot indica su estado (AVAILABLE o el estado de la reserva) "
+            "y los datos del jugador si hay reserva. "
+            "Solo operator o admin. Parámetro date opcional (default: hoy en BA)."
+        ),
+        parameters=[
+            OpenApiParameter(
+                "date",
+                type=str,
+                required=False,
+                description="Fecha en formato YYYY-MM-DD (hora Buenos Aires). Default: hoy.",
+            ),
+        ],
+        tags=["bookings"],
+    )
+    def get(self, request):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        date_str = request.query_params.get("date")
+        if not date_str:
+            date_str = datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).date().isoformat()
+
+        try:
+            data = get_daily_grid(date_str)
+        except ValueError:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Formato de fecha inválido. Usar YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(data)
 
 
 class AvailabilityView(APIView):

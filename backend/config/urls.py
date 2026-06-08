@@ -23,8 +23,15 @@ Endpoints de negocio — Sprint 2 (motor de reservas):
   /api/bookings/{id}/confirm/           — POST confirmar (operator/admin)
   /api/bookings/{id}/cancel/            — POST cancelar
   /api/bookings/{id}/complete/          — POST completar (operator/admin)
+  /api/bookings/daily-grid/             — GET grilla multi-cancha del día (operator/admin)
   /api/cash-movements/                  — GET caja diaria (operator/admin)
+  /api/cash-movements/export/           — GET exportar caja CSV (operator/admin)
   /api/courts/{id}/availability/        — GET grilla de disponibilidad (AllowAny)
+
+Endpoints de usuarios — Sprint 1+:
+  /api/users/me/                        — GET perfil propio (IsAuthenticated)
+  /api/users/                           — GET listado / POST crear operador (IsTenantAdmin)
+  /api/users/{id}/                      — GET detalle / PATCH editar / DELETE soft-delete (IsTenantAdmin)
 """
 
 from django.contrib import admin
@@ -47,6 +54,9 @@ urlpatterns = [
     # EmailTokenObtainPairView acepta {"email", "password"} → {access, refresh}
     path("api/auth/login/", EmailTokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+
+    # Users (gestión de operadores, perfil propio) — Sprint 1+
+    path("api/", include("apps.users.urls")),
 
     # Courts y ScheduleBlocks — Sprint 1
     path("api/", include("apps.courts.urls")),

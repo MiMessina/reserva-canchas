@@ -16,7 +16,7 @@
 
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutGrid, CalendarCheck, Wallet, LogOut } from 'lucide-react'
+import { LayoutGrid, CalendarCheck, Wallet, LogOut, TableProperties, Users } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
 
 export interface NavBarProps {
@@ -46,10 +46,22 @@ const NAV_ITEMS: NavItem[] = [
     allowedRoles: ['tenant_admin', 'operator'],
   },
   {
+    to: '/admin/grid',
+    label: 'Grilla',
+    icon: <TableProperties size={20} aria-hidden="true" />,
+    allowedRoles: ['tenant_admin', 'operator'],
+  },
+  {
     to: '/admin/cashbox',
     label: 'Caja',
     icon: <Wallet size={20} aria-hidden="true" />,
     allowedRoles: ['tenant_admin', 'operator'],
+  },
+  {
+    to: '/admin/operators',
+    label: 'Operadores',
+    icon: <Users size={20} aria-hidden="true" />,
+    allowedRoles: ['tenant_admin'],
   },
 ]
 
