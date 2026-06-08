@@ -9,6 +9,12 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true, // necesario para Docker (escucha en 0.0.0.0)
+    watch: {
+      // En Docker sobre Windows los inotify events no llegan al contenedor.
+      // usePolling activa un watcher por polling para que el HMR funcione.
+      usePolling: true,
+      interval: 1000,
+    },
   },
   resolve: {
     alias: {

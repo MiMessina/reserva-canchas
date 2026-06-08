@@ -430,9 +430,19 @@ export function BookingsAdminPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center gap-2">
-          <ClipboardList size={20} className="text-brand-600" aria-hidden="true" />
-          <h1 className="text-base font-semibold text-gray-900">Reservas</h1>
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ClipboardList size={20} className="text-brand-600" aria-hidden="true" />
+            <h1 className="text-base font-semibold text-gray-900">Reservas</h1>
+          </div>
+          <a
+            href="/booking"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+          >
+            + Nueva Reserva
+          </a>
         </div>
       </header>
 

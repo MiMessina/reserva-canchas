@@ -77,6 +77,7 @@ def get_availability(court: Court, date_str: str) -> list[dict]:
     )
 
     duration = timedelta(minutes=court.slot_duration_minutes)
+    now_utc = datetime.now(UTC)
     slots = []
 
     for block in blocks:
@@ -88,6 +89,11 @@ def get_availability(court: Court, date_str: str) -> list[dict]:
             end_ba = current_ba + duration
             start_utc = current_ba.astimezone(UTC)
             end_utc = end_ba.astimezone(UTC)
+
+            # No mostrar slots que ya comenzaron (jugador no puede reservar el pasado)
+            if start_utc <= now_utc:
+                current_ba = end_ba
+                continue
 
             # Solapamiento: reserva existente solapa si start < end_utc AND end > start_utc
             is_available = not any(
