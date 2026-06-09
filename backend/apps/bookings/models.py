@@ -5,7 +5,7 @@ Entidades del motor de reservas: Booking y CashMovement.
 
 ADR-006: Detección de overbooking por solapamiento de intervalos [start_dt, end_dt).
          end_dt = start_dt + court.slot_duration_minutes (calculado en services.py).
-ADR-008: Jugador registrado (user) XOR invitado (guest_name + guest_phone).
+ADR-008: Jugador registrado (user) XOR invitado (guest_name + guest_phone + guest_email).
          La regla XOR se valida en bookings/services.py, no aquí.
 ADR-011: Booking hereda de TimeStampedSoftDeleteModel (is_active, created_at, updated_at).
          CashMovement NO hereda de TimeStampedSoftDeleteModel: es inmutable, solo se crea.
@@ -78,6 +78,13 @@ class Booking(TimeStampedSoftDeleteModel):
         default="",
         verbose_name="Teléfono del invitado",
         help_text="Teléfono de contacto del invitado (cuando user es null, ADR-008).",
+    )
+    guest_email = models.EmailField(
+        max_length=254,
+        blank=True,
+        default="",
+        verbose_name="Email del invitado",
+        help_text="Email de contacto del invitado para notificaciones (cuando user es null, ADR-008).",
     )
     start_dt = models.DateTimeField(
         verbose_name="Inicio del turno (UTC)",

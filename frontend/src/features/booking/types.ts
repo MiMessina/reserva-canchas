@@ -57,6 +57,7 @@ export interface CreateBookingPayload {
   start_dt: string            // ISO 8601 UTC
   guest_name?: string
   guest_phone?: string
+  guest_email?: string
 }
 
 export interface CancelBookingPayload {

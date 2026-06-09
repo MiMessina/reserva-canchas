@@ -286,6 +286,34 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ---------------------------------------------------------------------------
+# Email — Django mail framework
+#
+# En desarrollo: EMAIL_BACKEND=console (los mails aparecen en docker logs).
+# En producción: SMTP real (Gmail). Requiere App Password, no contraseña normal.
+#
+# Variables de entorno:
+#   DJANGO_EMAIL_BACKEND  — backend de email (default: console en dev)
+#   EMAIL_HOST            — servidor SMTP (default: smtp.gmail.com)
+#   EMAIL_PORT            — puerto (default: 587)
+#   EMAIL_USE_TLS         — TLS (default: True)
+#   EMAIL_HOST_USER       — cuenta Gmail (ej: reservas@gmail.com)
+#   EMAIL_HOST_PASSWORD   — App Password de Gmail (16 chars, NO la contraseña normal)
+#   DEFAULT_FROM_EMAIL    — nombre y email del remitente
+# ---------------------------------------------------------------------------
+EMAIL_BACKEND = os.environ.get(
+    "DJANGO_EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", "CanchaYA <noreply@canchaYA.com>"
+)
+
+# ---------------------------------------------------------------------------
 # Logging básico
 # ---------------------------------------------------------------------------
 LOGGING = {

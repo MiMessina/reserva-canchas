@@ -16,7 +16,7 @@
 
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutGrid, CalendarCheck, Wallet, LogOut, TableProperties, Users } from 'lucide-react'
+import { Home, LayoutGrid, CalendarCheck, Wallet, LogOut, TableProperties, Users } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
 
 export interface NavBarProps {
@@ -33,6 +33,11 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  {
+    to: '/',
+    label: 'Inicio',
+    icon: <Home size={20} aria-hidden="true" />,
+  },
   {
     to: '/admin/courts',
     label: 'Canchas',

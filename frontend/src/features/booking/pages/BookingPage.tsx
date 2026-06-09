@@ -58,6 +58,11 @@ const bookingSchema = z.object({
     .string()
     .min(7, 'Ingresa un telefono valido.')
     .max(30, 'El telefono es demasiado largo.'),
+  guest_email: z
+    .string()
+    .email('Ingresa un email valido.')
+    .optional()
+    .or(z.literal('')),
 })
 
 type BookingFormValues = z.infer<typeof bookingSchema>
@@ -163,6 +168,7 @@ function BookingModal({
         start_dt: slot.start_dt,
         guest_name: values.guest_name,
         guest_phone: values.guest_phone,
+        guest_email: values.guest_email || undefined,
       })
       setSuccessData({
         bookingId: created.id,
@@ -277,6 +283,37 @@ function BookingModal({
             {errors.guest_phone && (
               <p role="alert" className="text-xs text-red-600">
                 {errors.guest_phone.message}
+              </p>
+            )}
+          </div>
+
+          {/* Campo: Email (opcional) */}
+          <div className="space-y-1">
+            <label
+              htmlFor="guest_email"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Email{' '}
+              <span className="text-gray-400 font-normal">(opcional — para recibir confirmacion)</span>
+            </label>
+            <input
+              id="guest_email"
+              type="email"
+              autoComplete="email"
+              placeholder="tu@email.com"
+              {...register('guest_email')}
+              className={[
+                'w-full rounded-lg border px-3 py-2.5 text-sm outline-none',
+                'focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
+                'transition-colors placeholder:text-gray-400',
+                errors.guest_email
+                  ? 'border-red-400 bg-red-50'
+                  : 'border-gray-300 bg-white',
+              ].join(' ')}
+            />
+            {errors.guest_email && (
+              <p role="alert" className="text-xs text-red-600">
+                {errors.guest_email.message}
               </p>
             )}
           </div>

@@ -212,6 +212,7 @@ class BookingViewSet(viewsets.GenericViewSet):
             user=user,
             guest_name=data.get("guest_name", ""),
             guest_phone=data.get("guest_phone", ""),
+            guest_email=data.get("guest_email", ""),
         )
         return Response(BookingPublicSerializer(booking).data, status=status.HTTP_201_CREATED)
 

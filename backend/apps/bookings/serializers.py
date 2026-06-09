@@ -151,6 +151,12 @@ class BookingCreateSerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Teléfono del invitado. Obligatorio si no hay usuario autenticado (ADR-008).",
     )
+    guest_email = serializers.EmailField(
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="Email del invitado para notificaciones (opcional, solo para reservas de invitado).",
+    )
 
 
 class BookingCancelSerializer(serializers.Serializer):

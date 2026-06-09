@@ -5,7 +5,7 @@ Toda la lógica de negocio de reservas y caja vive aquí (RULES.md §4, ARCHITEC
 Prohibido duplicar en views ni serializers.
 
 Funciones exportadas:
-  create_booking(*, court_id, start_dt, user=None, guest_name='', guest_phone='') -> Booking
+  create_booking(*, court_id, start_dt, user=None, guest_name='', guest_phone='', guest_email='') -> Booking
   confirm_booking(*, booking, operator) -> Booking
   cancel_booking(*, booking, cancelled_by, reason='') -> Booking
   complete_booking(*, booking) -> Booking
@@ -143,6 +143,7 @@ def create_booking(
     user=None,
     guest_name: str = "",
     guest_phone: str = "",
+    guest_email: str = "",
 ) -> Booking:
     """
     Crea una reserva nueva en estado PENDING_PAYMENT.
@@ -156,6 +157,7 @@ def create_booking(
       user        — instancia User autenticado, o None para reserva de invitado.
       guest_name  — nombre del invitado (obligatorio si user es None).
       guest_phone — teléfono del invitado (obligatorio si user es None).
+      guest_email — email del invitado para notificaciones (opcional, ADR-008).
 
     Validaciones (en orden):
       1. No en el pasado.
@@ -227,20 +229,32 @@ def create_booking(
             user=user,
             guest_name=guest_name,
             guest_phone=guest_phone,
+            guest_email=guest_email,
             start_dt=start_dt,
             end_dt=end_dt,
             price=court.base_price,
             status=Booking.Status.PENDING_PAYMENT,
         )
 
-        logger.info(
-            "Reserva creada: id=%s court=%s start=%s status=%s",
-            booking.pk,
-            court_id,
-            start_dt.isoformat(),
-            booking.status,
+    # Fuera del bloque atomic: el commit ya ocurrió.
+    logger.info(
+        "Reserva creada: id=%s court=%s start=%s status=%s",
+        booking.pk,
+        court_id,
+        start_dt.isoformat(),
+        booking.status,
+    )
+
+    # Notificación fire-and-forget: no debe romper el flujo de negocio.
+    try:
+        from apps.bookings.notifications import notify_booking_created
+        notify_booking_created(booking)
+    except Exception:
+        logger.exception(
+            "Error enviando email de creación: booking_id=%s", booking.pk
         )
-        return booking
+
+    return booking
 
 
 # ---------------------------------------------------------------------------
@@ -294,6 +308,16 @@ def confirm_booking(*, booking: Booking, operator) -> Booking:
         operator.pk,
         booking.price,
     )
+
+    # Notificación fire-and-forget: fuera de la transacción (commit ya ocurrió).
+    try:
+        from apps.bookings.notifications import notify_booking_confirmed
+        notify_booking_confirmed(booking)
+    except Exception:
+        logger.exception(
+            "Error enviando email de confirmación: booking_id=%s", booking.pk
+        )
+
     return booking
 
 
@@ -366,6 +390,16 @@ def cancel_booking(*, booking: Booking, cancelled_by, reason: str = "") -> Booki
         cancelled_by.pk if cancelled_by else "anonimo",
         reason,
     )
+
+    # Notificación fire-and-forget: fuera de la transacción (commit ya ocurrió).
+    try:
+        from apps.bookings.notifications import notify_booking_cancelled
+        notify_booking_cancelled(booking)
+    except Exception:
+        logger.exception(
+            "Error enviando email de cancelación: booking_id=%s", booking.pk
+        )
+
     return booking
 
 
