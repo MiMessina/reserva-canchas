@@ -22,6 +22,7 @@ import { TableProperties, CalendarDays } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
+import { BookingDetailModal } from '../BookingDetailModal'
 import { useDailyGrid } from '../hooks/useBookings'
 import { formatTimeBA, toLocalDateStringBA } from '@/lib/datetime'
 import { extractApiErrorMessage } from '@/lib/apiError'
@@ -72,6 +73,7 @@ function slotLabel(slot: DailyGridSlot): string {
 
 export function DailyGridPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayLocalDate())
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null)
 
   const { data, isLoading, isError, error, refetch } = useDailyGrid(selectedDate)
 
@@ -195,13 +197,34 @@ export function DailyGridPage() {
                           </td>
                         )
                       }
+
+                      const isClickable = slot.booking_id !== null
                       return (
                         <td
                           key={court.id}
                           className={[
                             'px-3 py-2 text-center text-xs font-medium rounded-sm transition-colors',
                             slotCellClasses(slot.status),
+                            isClickable ? 'cursor-pointer hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-500' : '',
                           ].join(' ')}
+                          onClick={isClickable ? () => setSelectedBookingId(slot.booking_id) : undefined}
+                          role={isClickable ? 'button' : undefined}
+                          tabIndex={isClickable ? 0 : undefined}
+                          onKeyDown={
+                            isClickable
+                              ? (e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    setSelectedBookingId(slot.booking_id)
+                                  }
+                                }
+                              : undefined
+                          }
+                          aria-label={
+                            isClickable
+                              ? `Ver detalle de reserva de ${slot.guest_name ?? 'invitado'} a las ${formatTimeBA(slot.start_dt)}`
+                              : undefined
+                          }
                         >
                           {slotLabel(slot)}
                         </td>
@@ -214,6 +237,12 @@ export function DailyGridPage() {
           </div>
         )}
       </main>
+
+      {/* Modal de detalle de reserva */}
+      <BookingDetailModal
+        bookingId={selectedBookingId}
+        onClose={() => setSelectedBookingId(null)}
+      />
     </div>
   )
 }

@@ -14,6 +14,10 @@ Serializers:
   CashDailySummarySerializer   — lectura del resumen diario de caja (summary endpoint).
   BookingsTodaySummarySerializer — lectura de conteos de reservas de hoy por estado (dashboard).
   DashboardSerializer          — lectura del resumen del día para el panel de inicio (dashboard).
+  WeeklyReportTotalsSerializer   — totales del rango completo en el reporte semanal.
+  WeeklyReportByDaySerializer    — desglose diario en el reporte semanal.
+  WeeklyReportByCourtSerializer  — desglose por cancha en el reporte semanal.
+  WeeklyReportSerializer         — respuesta completa de GET /api/bookings/weekly-report/.
 """
 
 from rest_framework import serializers
@@ -309,4 +313,133 @@ class DashboardSerializer(serializers.Serializer):
     )
     cashbox_today = CashDailySummarySerializer(
         help_text="Resumen de caja del día: neto, ingresos, devoluciones y conteos.",
+    )
+
+
+class WeeklyReportTotalsSerializer(serializers.Serializer):
+    """
+    Totales agregados del rango completo en el reporte semanal.
+
+    Parte del payload de WeeklyReportSerializer.
+    revenue_confirmed es la suma de CashMovement.amount > 0 en el rango.
+    """
+
+    bookings_total = serializers.IntegerField(
+        help_text="Total de reservas activas en el rango.",
+    )
+    confirmed = serializers.IntegerField(
+        help_text="Reservas en estado CONFIRMED.",
+    )
+    cancelled = serializers.IntegerField(
+        help_text="Reservas en estado CANCELLED.",
+    )
+    completed = serializers.IntegerField(
+        help_text="Reservas en estado COMPLETED.",
+    )
+    pending_payment = serializers.IntegerField(
+        help_text="Reservas en estado PENDING_PAYMENT.",
+    )
+    revenue_confirmed = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        help_text="Suma de movimientos de caja con amount > 0 en el rango.",
+    )
+
+
+class WeeklyReportByDaySerializer(serializers.Serializer):
+    """
+    Desglose diario de reservas y caja en el reporte semanal.
+
+    Cada elemento corresponde a un día del rango (date_from..date_to inclusivo).
+    """
+
+    date = serializers.CharField(
+        help_text="Fecha del día en formato YYYY-MM-DD (hora Buenos Aires).",
+    )
+    bookings_total = serializers.IntegerField(
+        help_text="Total de reservas con start_dt en este día.",
+    )
+    confirmed = serializers.IntegerField(
+        help_text="Reservas CONFIRMED en este día.",
+    )
+    cancelled = serializers.IntegerField(
+        help_text="Reservas CANCELLED en este día.",
+    )
+    completed = serializers.IntegerField(
+        help_text="Reservas COMPLETED en este día.",
+    )
+    pending_payment = serializers.IntegerField(
+        help_text="Reservas PENDING_PAYMENT en este día.",
+    )
+    revenue_confirmed = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        help_text="Suma de movimientos de caja positivos (created_at en este día).",
+    )
+
+
+class WeeklyReportByCourtSerializer(serializers.Serializer):
+    """
+    Desglose por cancha en el reporte semanal.
+
+    occupancy_pct = confirmed_or_completed / bookings_total * 100, redondeado a 1 decimal.
+    Si bookings_total == 0, occupancy_pct = 0.0.
+    """
+
+    court_id = serializers.IntegerField(
+        help_text="PK de la cancha.",
+    )
+    court_name = serializers.CharField(
+        help_text="Nombre de la cancha.",
+    )
+    court_type = serializers.CharField(
+        help_text="Tipo de cancha (futbol_5, futbol_7, padel, etc.).",
+    )
+    bookings_total = serializers.IntegerField(
+        help_text="Total de reservas activas en el rango para esta cancha.",
+    )
+    confirmed_or_completed = serializers.IntegerField(
+        help_text="Reservas CONFIRMED o COMPLETED (efectivamente jugadas/confirmadas).",
+    )
+    occupancy_pct = serializers.FloatField(
+        help_text="Porcentaje de ocupación: confirmed_or_completed / bookings_total * 100.",
+    )
+    revenue_confirmed = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        help_text="Suma de movimientos de caja positivos de esta cancha en el rango.",
+    )
+
+
+class WeeklyReportSerializer(serializers.Serializer):
+    """
+    Respuesta del endpoint GET /api/bookings/weekly-report/.
+
+    Retorna estadísticas de ocupación y caja para un rango de fechas.
+    Solo lectura; todos los datos provienen de get_weekly_report() (selectors.py).
+
+    Campos:
+      date_from   — fecha de inicio del rango (YYYY-MM-DD, hora Buenos Aires).
+      date_to     — fecha de fin del rango (YYYY-MM-DD, hora Buenos Aires, inclusivo).
+      totals      — totales agregados del período.
+      by_day      — desglose día a día.
+      by_court    — desglose por cancha activa.
+    """
+
+    date_from = serializers.CharField(
+        help_text="Fecha de inicio del rango (YYYY-MM-DD, hora Buenos Aires).",
+    )
+    date_to = serializers.CharField(
+        help_text="Fecha de fin del rango (YYYY-MM-DD, hora Buenos Aires, inclusivo).",
+    )
+    totals = WeeklyReportTotalsSerializer(
+        help_text="Totales agregados del período completo.",
+    )
+    by_day = WeeklyReportByDaySerializer(
+        many=True,
+        help_text="Desglose día a día del rango.",
+    )
+    by_court = WeeklyReportByCourtSerializer(
+        many=True,
+        help_text="Desglose por cancha activa en el rango.",
     )

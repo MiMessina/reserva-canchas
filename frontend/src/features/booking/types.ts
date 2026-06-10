@@ -139,6 +139,23 @@ export interface DailyGridResponse {
   courts: DailyGridCourt[]
 }
 
+// ─── Detalle completo de una reserva (GET /api/bookings/{id}/) ───────────────
+
+export interface BookingDetail {
+  id: number
+  court: number
+  court_name: string
+  start_dt: string            // ISO 8601 UTC
+  end_dt: string              // ISO 8601 UTC
+  guest_name: string | null
+  guest_phone: string | null
+  status: BookingStatus
+  status_display: string
+  price: string               // decimal string, ej: "5000.00"
+  notes: string | null
+  created_at: string          // ISO 8601 UTC
+}
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export interface BookingsTodaySummary {

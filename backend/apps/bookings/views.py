@@ -14,6 +14,7 @@ Endpoints registrados en apps/bookings/urls.py:
   GET    /api/cash-movements/export/        — exportar caja en CSV (operator/admin)
   GET    /api/dashboard/                    — resumen del día para el panel de inicio (operator/admin)
   GET    /api/bookings/daily-grid/          — grilla multi-cancha del día (operator/admin)
+  GET    /api/bookings/weekly-report/       — reporte semanal de ocupación y caja (operator/admin)
   GET    /api/courts/{court_id}/availability/?date=YYYY-MM-DD  — grilla (AllowAny)
 
 Reglas:
@@ -38,7 +39,7 @@ from rest_framework.views import APIView
 
 from apps.bookings.models import Booking, CashMovement
 from apps.bookings.permissions import IsOperatorOrAdmin
-from apps.bookings.selectors import get_availability, get_daily_cash_summary, get_daily_grid, get_dashboard_summary
+from apps.bookings.selectors import get_availability, get_daily_cash_summary, get_daily_grid, get_dashboard_summary, get_weekly_report
 from apps.bookings.serializers import (
     BookingCancelSerializer,
     BookingCreateSerializer,
@@ -48,6 +49,7 @@ from apps.bookings.serializers import (
     CashDailySummarySerializer,
     CashMovementSerializer,
     DashboardSerializer,
+    WeeklyReportSerializer,
 )
 from apps.bookings.services import (
     cancel_booking,
@@ -690,3 +692,123 @@ class AvailabilityView(APIView):
             )
 
         return Response({"date": date_str, "court": court_id, "slots": slots})
+
+
+class WeeklyReportView(APIView):
+    """
+    Vista del reporte semanal de ocupación y caja.
+
+    GET /api/bookings/weekly-report/?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
+
+    Parámetros opcionales. Si no se envían, usa la semana actual (lunes a domingo
+    en hora Buenos Aires).
+    Máximo 31 días entre date_from y date_to; retorna 400 si se excede.
+    Solo operator o admin.
+
+    Respuesta:
+      {
+        "date_from": "YYYY-MM-DD",
+        "date_to": "YYYY-MM-DD",
+        "totals": { bookings_total, confirmed, cancelled, completed, pending_payment, revenue_confirmed },
+        "by_day": [ { date, bookings_total, confirmed, ... } ],
+        "by_court": [ { court_id, court_name, court_type, bookings_total, confirmed_or_completed, occupancy_pct, revenue_confirmed } ]
+      }
+    """
+
+    permission_classes = [IsAuthenticated, IsOperatorOrAdmin]
+
+    @extend_schema(
+        summary="Reporte semanal de ocupación y caja",
+        description=(
+            "Retorna estadísticas de ocupación y caja para un rango de fechas. "
+            "Parámetros opcionales: si no se envían, usa la semana actual "
+            "(lunes a domingo en hora Buenos Aires). "
+            "Máximo 31 días entre date_from y date_to. "
+            "Solo operator o admin."
+        ),
+        parameters=[
+            OpenApiParameter(
+                "date_from",
+                type=str,
+                required=False,
+                description="Fecha de inicio en formato YYYY-MM-DD (hora Buenos Aires). Default: lunes de esta semana.",
+            ),
+            OpenApiParameter(
+                "date_to",
+                type=str,
+                required=False,
+                description="Fecha de fin en formato YYYY-MM-DD (hora Buenos Aires, inclusivo). Default: domingo de esta semana.",
+            ),
+        ],
+        tags=["reports"],
+        responses={200: WeeklyReportSerializer},
+    )
+    def get(self, request):
+        from datetime import date as date_type, datetime, timedelta
+        from zoneinfo import ZoneInfo
+
+        BUENOS_AIRES = ZoneInfo("America/Argentina/Buenos_Aires")
+
+        # Calcular semana actual en BA si no se pasan parámetros
+        today_ba = datetime.now(BUENOS_AIRES).date()
+        # Lunes = weekday 0; domingo = weekday 6
+        monday = today_ba - timedelta(days=today_ba.weekday())
+        sunday = monday + timedelta(days=6)
+
+        date_from_str = request.query_params.get("date_from") or monday.isoformat()
+        date_to_str = request.query_params.get("date_to") or sunday.isoformat()
+
+        # Validar formato de fechas
+        try:
+            date_from = date_type.fromisoformat(date_from_str)
+            date_to = date_type.fromisoformat(date_to_str)
+        except ValueError:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Formato de fecha inválido. Usar YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar orden lógico
+        if date_from > date_to:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "date_from no puede ser posterior a date_to.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Validar máximo 31 días
+        delta = (date_to - date_from).days + 1  # inclusivo
+        if delta > 31:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "El rango no puede superar los 31 días.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            data = get_weekly_report(date_from_str, date_to_str)
+        except ValueError:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Formato de fecha inválido. Usar YYYY-MM-DD.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(WeeklyReportSerializer(data).data)

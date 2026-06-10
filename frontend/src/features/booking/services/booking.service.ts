@@ -21,6 +21,7 @@ import type { PaginatedResponse } from '@/types/api'
 import type {
   AvailabilityResponse,
   Booking,
+  BookingDetail,
   BookingsFilters,
   CancelBookingPayload,
   CashDailySummary,
@@ -88,6 +89,15 @@ export async function cancelBooking(
 
 export async function completeBooking(id: number): Promise<Booking> {
   const { data } = await apiClient.post<Booking>(`/bookings/${id}/complete/`)
+  return data
+}
+
+/**
+ * Detalle completo de una reserva (operator/admin). Requiere JWT.
+ * GET /api/bookings/{id}/
+ */
+export async function getBookingDetail(id: number): Promise<BookingDetail> {
+  const { data } = await apiClient.get<BookingDetail>(`/bookings/${id}/`)
   return data
 }
 

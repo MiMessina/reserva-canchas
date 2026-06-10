@@ -2,7 +2,8 @@
 URLs — app bookings
 
 Registra los ViewSets de Booking y CashMovement con DefaultRouter,
-y las views de disponibilidad, dashboard y grilla multi-cancha como rutas explícitas.
+y las views de disponibilidad, dashboard, grilla multi-cancha y reporte semanal
+como rutas explícitas.
 
 Rutas generadas:
   GET    /api/bookings/                     — listado (admin/operator)
@@ -15,6 +16,7 @@ Rutas generadas:
   GET    /api/cash-movements/export/        — exportar CSV (operator/admin)
   GET    /api/dashboard/                    — resumen del día (operator/admin)
   GET    /api/bookings/daily-grid/          — grilla multi-cancha del día (operator/admin)
+  GET    /api/bookings/weekly-report/       — reporte semanal de ocupación y caja (operator/admin)
   GET    /api/courts/{court_id}/availability/?date=YYYY-MM-DD  — grilla (AllowAny)
 
 Incluido en config/urls.py con:
@@ -24,7 +26,14 @@ Incluido en config/urls.py con:
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from apps.bookings.views import AvailabilityView, BookingViewSet, CashMovementViewSet, DailyGridView, DashboardView
+from apps.bookings.views import (
+    AvailabilityView,
+    BookingViewSet,
+    CashMovementViewSet,
+    DailyGridView,
+    DashboardView,
+    WeeklyReportView,
+)
 
 router = DefaultRouter()
 router.register(r"bookings", BookingViewSet, basename="booking")
@@ -35,6 +44,7 @@ urlpatterns = [
     # el patrón genérico {pk}/ del router capture rutas como bookings/daily-grid/.
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
     path("bookings/daily-grid/", DailyGridView.as_view(), name="booking-daily-grid"),
+    path("bookings/weekly-report/", WeeklyReportView.as_view(), name="bookings-weekly-report"),
     path(
         "courts/<int:court_id>/availability/",
         AvailabilityView.as_view(),

@@ -16,7 +16,7 @@
 
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, LayoutGrid, CalendarCheck, Wallet, LogOut, TableProperties, Users, MessageCircle, Moon, Sun } from 'lucide-react'
+import { Home, LayoutGrid, CalendarCheck, Wallet, LogOut, TableProperties, Users, MessageCircle, Moon, Sun, BarChart2 } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
 import { useThemeContext } from '@/context/ThemeContext'
 
@@ -73,6 +73,12 @@ const NAV_ITEMS: NavItem[] = [
     to: '/admin/agent',
     label: 'Asistente',
     icon: <MessageCircle size={20} aria-hidden="true" />,
+    allowedRoles: ['tenant_admin', 'operator'],
+  },
+  {
+    to: '/admin/reports',
+    label: 'Reportes',
+    icon: <BarChart2 size={20} aria-hidden="true" />,
     allowedRoles: ['tenant_admin', 'operator'],
   },
 ]

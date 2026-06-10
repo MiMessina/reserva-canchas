@@ -23,6 +23,10 @@ Funciones exportadas:
     Retorna todas las canchas activas con sus slots y el estado de cada uno.
     Usado por DailyGridView (GET /api/bookings/daily-grid/).
 
+  get_weekly_report(date_from_str, date_to_str) -> dict
+    Estadísticas de ocupación y caja para un rango de fechas (máx. 31 días).
+    Usado por WeeklyReportView (GET /api/bookings/weekly-report/).
+
 Zona horaria:
   date_str está en hora Buenos Aires (lo que el jugador ve).
   Los slots se retornan en UTC (ISO 8601) para que el frontend convierta.
@@ -405,4 +409,175 @@ def get_daily_grid(date_str: str) -> dict:
     return {
         "date": date_str,
         "courts": courts_data,
+    }
+
+
+def get_weekly_report(date_from_str: str, date_to_str: str) -> dict:
+    """
+    Calcula estadísticas de ocupación y caja para un rango de fechas.
+
+    Parámetros:
+      date_from_str — fecha de inicio en formato "YYYY-MM-DD" en hora Buenos Aires.
+      date_to_str   — fecha de fin en formato "YYYY-MM-DD" en hora Buenos Aires (inclusiva).
+
+    Retorna dict con:
+      date_from       — date_from_str original.
+      date_to         — date_to_str original.
+      totals          — dict con agregados del rango completo:
+                          bookings_total, confirmed, cancelled, completed,
+                          pending_payment, revenue_confirmed.
+      by_day          — lista de dicts por día con los mismos campos que totals + date.
+      by_court        — lista de dicts por cancha activa:
+                          court_id, court_name, court_type, bookings_total,
+                          confirmed_or_completed, occupancy_pct, revenue_confirmed.
+
+    Lanza ValueError si alguno de los date_str no tiene formato válido.
+
+    Notas de implementación:
+      - Los rangos UTC se calculan explícitamente (TIME_ZONE='UTC' en settings.py;
+        los filtros sobre start_dt / created_at trabajan en UTC).
+      - revenue_confirmed: suma de CashMovement.amount > 0 en el rango de fechas,
+        filtrados por booking__is_active=True (soft-delete awareness).
+      - Todas las queries de reservas filtran is_active=True (soft-delete).
+    """
+    # Validar fechas (lanza ValueError si el formato es inválido)
+    date_from = date_type.fromisoformat(date_from_str)
+    date_to = date_type.fromisoformat(date_to_str)
+
+    # Rango del período completo en Buenos Aires → convertido a UTC para filtrar
+    period_start_ba = datetime(date_from.year, date_from.month, date_from.day, 0, 0, 0, tzinfo=BUENOS_AIRES)
+    period_end_ba = datetime(date_to.year, date_to.month, date_to.day, 23, 59, 59, tzinfo=BUENOS_AIRES)
+    period_start_utc = period_start_ba.astimezone(UTC)
+    period_end_utc = period_end_ba.astimezone(UTC)
+
+    zero = Decimal("0")
+
+    # -----------------------------------------------------------------------
+    # Totales del período completo (una sola query de Booking)
+    # -----------------------------------------------------------------------
+    totals_agg = Booking.objects.filter(
+        is_active=True,
+        start_dt__gte=period_start_utc,
+        start_dt__lte=period_end_utc,
+    ).aggregate(
+        bookings_total=Count("id"),
+        confirmed=Count("id", filter=Q(status=Booking.Status.CONFIRMED)),
+        cancelled=Count("id", filter=Q(status=Booking.Status.CANCELLED)),
+        completed=Count("id", filter=Q(status=Booking.Status.COMPLETED)),
+        pending_payment=Count("id", filter=Q(status=Booking.Status.PENDING_PAYMENT)),
+    )
+
+    # Revenue: suma de CashMovement.amount > 0 en el rango (por created_at)
+    revenue_agg = CashMovement.objects.filter(
+        booking__is_active=True,
+        created_at__gte=period_start_utc,
+        created_at__lte=period_end_utc,
+        amount__gt=0,
+    ).aggregate(revenue=Sum("amount"))
+    total_revenue = revenue_agg["revenue"] if revenue_agg["revenue"] is not None else zero
+
+    totals = {
+        "bookings_total": totals_agg["bookings_total"] or 0,
+        "confirmed": totals_agg["confirmed"] or 0,
+        "cancelled": totals_agg["cancelled"] or 0,
+        "completed": totals_agg["completed"] or 0,
+        "pending_payment": totals_agg["pending_payment"] or 0,
+        "revenue_confirmed": total_revenue,
+    }
+
+    # -----------------------------------------------------------------------
+    # Desglose por día
+    # -----------------------------------------------------------------------
+    by_day = []
+    current = date_from
+    while current <= date_to:
+        day_start_ba = datetime(current.year, current.month, current.day, 0, 0, 0, tzinfo=BUENOS_AIRES)
+        day_end_ba = datetime(current.year, current.month, current.day, 23, 59, 59, tzinfo=BUENOS_AIRES)
+        day_start_utc = day_start_ba.astimezone(UTC)
+        day_end_utc = day_end_ba.astimezone(UTC)
+
+        day_agg = Booking.objects.filter(
+            is_active=True,
+            start_dt__gte=day_start_utc,
+            start_dt__lte=day_end_utc,
+        ).aggregate(
+            bookings_total=Count("id"),
+            confirmed=Count("id", filter=Q(status=Booking.Status.CONFIRMED)),
+            cancelled=Count("id", filter=Q(status=Booking.Status.CANCELLED)),
+            completed=Count("id", filter=Q(status=Booking.Status.COMPLETED)),
+            pending_payment=Count("id", filter=Q(status=Booking.Status.PENDING_PAYMENT)),
+        )
+
+        day_revenue_agg = CashMovement.objects.filter(
+            booking__is_active=True,
+            created_at__gte=day_start_utc,
+            created_at__lte=day_end_utc,
+            amount__gt=0,
+        ).aggregate(revenue=Sum("amount"))
+        day_revenue = day_revenue_agg["revenue"] if day_revenue_agg["revenue"] is not None else zero
+
+        by_day.append({
+            "date": current.isoformat(),
+            "bookings_total": day_agg["bookings_total"] or 0,
+            "confirmed": day_agg["confirmed"] or 0,
+            "cancelled": day_agg["cancelled"] or 0,
+            "completed": day_agg["completed"] or 0,
+            "pending_payment": day_agg["pending_payment"] or 0,
+            "revenue_confirmed": day_revenue,
+        })
+
+        current += timedelta(days=1)
+
+    # -----------------------------------------------------------------------
+    # Desglose por cancha
+    # -----------------------------------------------------------------------
+    courts = Court.objects.filter(is_active=True).order_by("name")
+
+    by_court = []
+    for court in courts:
+        court_agg = Booking.objects.filter(
+            court=court,
+            is_active=True,
+            start_dt__gte=period_start_utc,
+            start_dt__lte=period_end_utc,
+        ).aggregate(
+            bookings_total=Count("id"),
+            confirmed_or_completed=Count(
+                "id",
+                filter=Q(status__in=[Booking.Status.CONFIRMED, Booking.Status.COMPLETED]),
+            ),
+        )
+
+        court_revenue_agg = CashMovement.objects.filter(
+            booking__court=court,
+            booking__is_active=True,
+            created_at__gte=period_start_utc,
+            created_at__lte=period_end_utc,
+            amount__gt=0,
+        ).aggregate(revenue=Sum("amount"))
+        court_revenue = court_revenue_agg["revenue"] if court_revenue_agg["revenue"] is not None else zero
+
+        bookings_total = court_agg["bookings_total"] or 0
+        confirmed_or_completed = court_agg["confirmed_or_completed"] or 0
+        if bookings_total > 0:
+            occupancy_pct = round(confirmed_or_completed / bookings_total * 100, 1)
+        else:
+            occupancy_pct = 0.0
+
+        by_court.append({
+            "court_id": court.pk,
+            "court_name": court.name,
+            "court_type": court.court_type,
+            "bookings_total": bookings_total,
+            "confirmed_or_completed": confirmed_or_completed,
+            "occupancy_pct": occupancy_pct,
+            "revenue_confirmed": court_revenue,
+        })
+
+    return {
+        "date_from": date_from_str,
+        "date_to": date_to_str,
+        "totals": totals,
+        "by_day": by_day,
+        "by_court": by_court,
     }
