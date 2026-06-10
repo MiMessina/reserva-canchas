@@ -46,7 +46,7 @@ export function CourtDetailPage() {
 
   if (isNaN(courtId) || courtId <= 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center px-4">
         <ErrorState message="ID de cancha invalido." />
         <Button
           variant="secondary"
@@ -62,18 +62,18 @@ export function CourtDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3">
         <button
           type="button"
           aria-label="Volver al listado"
           onClick={() => navigate('/admin/courts')}
-          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
         >
           <ArrowLeft size={18} />
         </button>
-        <h1 className="text-base font-semibold text-gray-900 flex-1 truncate">
+        <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex-1 truncate">
           {isLoading ? 'Cargando...' : (court?.name ?? 'Detalle de cancha')}
         </h1>
         {isTenantAdmin && court && (
@@ -110,14 +110,14 @@ export function CourtDetailPage() {
             {/* Tarjeta de info */}
             <section
               aria-label="Informacion de la cancha"
-              className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4"
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5 space-y-4"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">{court.name}</h2>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{court.name}</h2>
                   <div className="flex items-center gap-1.5 mt-1">
                     <MapPin size={13} className="text-gray-400" aria-hidden="true" />
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       {COURT_TYPE_LABELS[court.court_type]}
                       {court.surface ? ` · ${court.surface}` : ''}
                     </span>
@@ -136,15 +136,15 @@ export function CourtDetailPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3">
                   <span className="block text-xs text-gray-400 mb-0.5">Precio base</span>
-                  <span className="text-base font-bold text-gray-800">
+                  <span className="text-base font-bold text-gray-800 dark:text-gray-200">
                     {formatPrice(court.base_price)}
                   </span>
                 </div>
-                <div className="bg-gray-50 rounded-xl px-4 py-3">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-xl px-4 py-3">
                   <span className="block text-xs text-gray-400 mb-0.5">Duracion del turno</span>
-                  <span className="text-base font-bold text-gray-800">
+                  <span className="text-base font-bold text-gray-800 dark:text-gray-200">
                     {court.slot_duration_minutes} min
                   </span>
                 </div>
@@ -154,7 +154,7 @@ export function CourtDetailPage() {
             {/* Seccion de horarios */}
             <section
               aria-label="Horarios de la cancha"
-              className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5"
+              className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-5"
             >
               <ScheduleBlocksSection
                 courtId={court.id}

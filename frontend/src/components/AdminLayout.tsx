@@ -19,7 +19,7 @@ export function AdminLayout() {
   const { user, logout } = useAuth()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <NavBar user={user} onLogout={logout} />
 
       {/*

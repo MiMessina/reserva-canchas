@@ -53,13 +53,13 @@ export function CourtsListPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between gap-3">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-sm" aria-hidden="true">C</span>
           </div>
-          <h1 className="text-base font-semibold text-gray-900">Canchas</h1>
+          <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">Canchas</h1>
         </div>
 
         {isTenantAdmin && (
@@ -75,13 +75,13 @@ export function CourtsListPage() {
 
       <main className="max-w-lg mx-auto px-4 py-5 space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             {isLoading
               ? 'Cargando...'
               : `${courts.length} cancha${courts.length !== 1 ? 's' : ''}`}
           </span>
           <label className="flex items-center gap-2 cursor-pointer select-none">
-            <span className="text-sm text-gray-600">Mostrar inactivas</span>
+            <span className="text-sm text-gray-600 dark:text-gray-300">Mostrar inactivas</span>
             <button
               type="button"
               role="switch"

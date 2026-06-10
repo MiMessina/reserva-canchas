@@ -40,9 +40,9 @@ export function CourtCard({
   return (
     <article
       className={[
-        'bg-white rounded-2xl border shadow-sm p-4',
+        'bg-white dark:bg-gray-800 rounded-2xl border shadow-sm p-4',
         'transition-opacity',
-        court.is_active ? 'border-gray-200' : 'border-gray-200 opacity-70',
+        court.is_active ? 'border-gray-200 dark:border-gray-700' : 'border-gray-200 dark:border-gray-700 opacity-70',
       ].join(' ')}
       aria-label={`Cancha: ${court.name}`}
     >
@@ -54,13 +54,13 @@ export function CourtCard({
             onClick={() => onViewDetail(court)}
             className="text-left focus:outline-none focus:ring-2 focus:ring-brand-500 rounded"
           >
-            <h3 className="font-semibold text-gray-900 text-base leading-tight hover:text-brand-600 transition-colors">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base leading-tight hover:text-brand-600 transition-colors">
               {court.name}
             </h3>
           </button>
           <div className="flex items-center gap-1.5 mt-1">
             <MapPin size={12} className="text-gray-400 shrink-0" aria-hidden="true" />
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
               {COURT_TYPE_LABELS[court.court_type]}
               {court.surface ? ` · ${court.surface}` : ''}
             </span>
@@ -83,15 +83,15 @@ export function CourtCard({
 
       {/* Datos */}
       <div className="grid grid-cols-2 gap-2 mb-4">
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2">
           <span className="block text-xs text-gray-400 mb-0.5">Precio base</span>
-          <span className="text-sm font-semibold text-gray-800">
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             {formatPrice(court.base_price)}
           </span>
         </div>
-        <div className="bg-gray-50 rounded-lg px-3 py-2">
+        <div className="bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2">
           <span className="block text-xs text-gray-400 mb-0.5">Turno</span>
-          <span className="text-sm font-semibold text-gray-800">
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             {court.slot_duration_minutes} min
           </span>
         </div>
@@ -99,17 +99,17 @@ export function CourtCard({
 
       {/* Acciones — solo tenant_admin */}
       {canEdit && (
-        <div className="flex gap-2 border-t border-gray-100 pt-3">
+        <div className="flex gap-2 border-t border-gray-100 dark:border-gray-700 pt-3">
           <button
             type="button"
             aria-label={`Editar cancha ${court.name}`}
             onClick={() => onEdit(court)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-brand-600 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-brand-600 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <Pencil size={14} aria-hidden="true" />
             Editar
           </button>
-          <div className="w-px bg-gray-100" aria-hidden="true" />
+          <div className="w-px bg-gray-100 dark:bg-gray-700" aria-hidden="true" />
           <button
             type="button"
             aria-label={
@@ -122,8 +122,8 @@ export function CourtCard({
               'flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
               'focus:outline-none focus:ring-2',
               court.is_active
-                ? 'text-gray-600 hover:bg-red-50 hover:text-red-600 focus:ring-red-500'
-                : 'text-gray-600 hover:bg-green-50 hover:text-green-600 focus:ring-green-500',
+                ? 'text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 focus:ring-red-500'
+                : 'text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 focus:ring-green-500',
             ].join(' ')}
           >
             {court.is_active ? (

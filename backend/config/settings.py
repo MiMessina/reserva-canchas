@@ -86,6 +86,7 @@ TENANT_APPS = [
     "apps.courts",   # ABM canchas + ScheduleBlock (Sprint 1)
     "apps.bookings", # Motor de reservas (Sprint 1+)
     "apps.cashbox",  # Caja diaria (Sprint 1+)
+    "apps.agent",   # Agente IA conversacional (ADR-012)
     # Framework y documentación
     "rest_framework",
     "drf_spectacular",
@@ -312,6 +313,13 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL", "CanchaYA <noreply@canchaYA.com>"
 )
+
+# ---------------------------------------------------------------------------
+# Anthropic / Claude API (ADR-012: agente IA conversacional)
+# ANTHROPIC_API_KEY es obligatoria para el endpoint /api/agent/chat/.
+# Si no está configurada, el endpoint devuelve 503 en lugar de crashear.
+# ---------------------------------------------------------------------------
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Logging básico

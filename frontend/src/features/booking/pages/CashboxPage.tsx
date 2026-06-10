@@ -65,11 +65,11 @@ function SummaryCard({ isLoading, isError, summary }: SummaryCardProps) {
   return (
     <div
       aria-label="Resumen del dia"
-      className="grid grid-cols-3 divide-x divide-gray-200 rounded-xl border border-gray-200 bg-white overflow-hidden"
+      className="grid grid-cols-3 divide-x divide-gray-200 dark:divide-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden"
     >
       {/* Ingresos */}
       <div className="px-4 py-3 text-center">
-        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">
           Ingresos
         </p>
         {placeholder ? (
@@ -79,7 +79,7 @@ function SummaryCard({ isLoading, isError, summary }: SummaryCardProps) {
             {formatARS(summary.ingresos)}
           </p>
         )}
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
           {placeholder
             ? '—'
             : `${summary.ingresos_count} movimiento${summary.ingresos_count !== 1 ? 's' : ''}`}
@@ -88,7 +88,7 @@ function SummaryCard({ isLoading, isError, summary }: SummaryCardProps) {
 
       {/* Devoluciones */}
       <div className="px-4 py-3 text-center">
-        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">
           Devoluciones
         </p>
         {placeholder ? (
@@ -100,7 +100,7 @@ function SummaryCard({ isLoading, isError, summary }: SummaryCardProps) {
               : formatARS(summary.devoluciones)}
           </p>
         )}
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
           {placeholder
             ? '—'
             : `${summary.devoluciones_count} reversion${summary.devoluciones_count !== 1 ? 'es' : ''}`}
@@ -109,7 +109,7 @@ function SummaryCard({ isLoading, isError, summary }: SummaryCardProps) {
 
       {/* Total neto */}
       <div className="px-4 py-3 text-center">
-        <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">
           Total neto
         </p>
         {isLoading ? (
@@ -185,16 +185,16 @@ export function CashboxPage() {
   const movements = data?.results ?? []
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="max-w-lg mx-auto flex items-center gap-2">
           <Wallet size={20} className="text-brand-600" aria-hidden="true" />
-          <h1 className="text-base font-semibold text-gray-900">Caja diaria</h1>
+          <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">Caja diaria</h1>
           <button
             type="button"
             onClick={() => void handleExportCSV()}
-            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:text-brand-700 hover:bg-brand-50 border border-gray-200 transition-colors"
+            className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-brand-700 hover:bg-brand-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 transition-colors"
           >
             <Download size={15} aria-hidden="true" />
             Exportar CSV
@@ -207,7 +207,7 @@ export function CashboxPage() {
         <div className="space-y-1.5">
           <label
             htmlFor="cashbox-date"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-200"
           >
             Fecha
           </label>
@@ -222,7 +222,7 @@ export function CashboxPage() {
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-gray-100 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             />
           </div>
         </div>
@@ -266,16 +266,16 @@ export function CashboxPage() {
                 return (
                   <li
                     key={movement.id}
-                    className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-start justify-between gap-3"
+                    className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 flex items-start justify-between gap-3"
                   >
                     {/* Info del movimiento */}
                     <div className="min-w-0 flex-1 space-y-0.5">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                         {movement.booking_court}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {formatTimeBA(movement.created_at)} &middot; por{' '}
-                        <span className="text-gray-600">
+                        <span className="text-gray-600 dark:text-gray-300">
                           {movement.operator_email}
                         </span>
                       </p>

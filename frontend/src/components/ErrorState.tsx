@@ -45,10 +45,10 @@ export function ErrorState({
       <span className="text-red-300 mb-4">
         <AlertCircle size={48} strokeWidth={1.5} aria-hidden="true" />
       </span>
-      <h3 className="text-base font-semibold text-gray-700">
+      <h3 className="text-base font-semibold text-gray-700 dark:text-gray-100">
         Algo salió mal
       </h3>
-      <p className="mt-1 text-sm text-gray-500 max-w-xs">{message}</p>
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-xs">{message}</p>
       {onRetry && (
         <div className="mt-5">
           <Button

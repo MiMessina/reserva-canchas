@@ -124,9 +124,11 @@ export function ScheduleBlockForm({
 
   const inputClass = (hasError: boolean) =>
     [
-      'w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white',
+      'w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white dark:bg-gray-700 dark:text-gray-100',
       'focus:outline-none focus:ring-2 focus:ring-brand-500',
-      hasError ? 'border-red-400 focus:ring-red-400' : 'border-gray-300',
+      hasError
+        ? 'border-red-400 focus:ring-red-400'
+        : 'border-gray-300 dark:border-gray-600',
     ].join(' ')
 
   return (
@@ -148,7 +150,7 @@ export function ScheduleBlockForm({
 
       {/* Dia de la semana */}
       <div>
-        <label htmlFor="weekday" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="weekday" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Dia <span aria-hidden="true" className="text-red-500">*</span>
         </label>
         <select
@@ -171,7 +173,7 @@ export function ScheduleBlockForm({
       {/* Horarios: apertura y cierre en la misma fila en pantallas medianas */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="open_time" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="open_time" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
             Apertura <span aria-hidden="true" className="text-red-500">*</span>
           </label>
           <input
@@ -190,7 +192,7 @@ export function ScheduleBlockForm({
         </div>
 
         <div>
-          <label htmlFor="close_time" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="close_time" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
             Cierre <span aria-hidden="true" className="text-red-500">*</span>
           </label>
           <input

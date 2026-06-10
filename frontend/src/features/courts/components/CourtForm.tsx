@@ -104,9 +104,11 @@ export function CourtForm({ court, onSuccess, onCancel }: CourtFormProps) {
 
   const inputClass = (hasError: boolean) =>
     [
-      'w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white',
+      'w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm bg-white dark:bg-gray-700 dark:text-gray-100',
       'focus:outline-none focus:ring-2 focus:ring-brand-500',
-      hasError ? 'border-red-400 focus:ring-red-400' : 'border-gray-300',
+      hasError
+        ? 'border-red-400 focus:ring-red-400'
+        : 'border-gray-300 dark:border-gray-600',
     ].join(' ')
 
   return (
@@ -128,7 +130,7 @@ export function CourtForm({ court, onSuccess, onCancel }: CourtFormProps) {
 
       {/* Nombre */}
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Nombre <span aria-hidden="true" className="text-red-500">*</span>
         </label>
         <input
@@ -150,7 +152,7 @@ export function CourtForm({ court, onSuccess, onCancel }: CourtFormProps) {
 
       {/* Tipo de cancha */}
       <div>
-        <label htmlFor="court_type" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="court_type" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Tipo <span aria-hidden="true" className="text-red-500">*</span>
         </label>
         <select
@@ -174,7 +176,7 @@ export function CourtForm({ court, onSuccess, onCancel }: CourtFormProps) {
 
       {/* Superficie */}
       <div>
-        <label htmlFor="surface" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="surface" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Superficie <span className="text-xs text-gray-400">(opcional)</span>
         </label>
         <input
@@ -191,7 +193,7 @@ export function CourtForm({ court, onSuccess, onCancel }: CourtFormProps) {
 
       {/* Precio base */}
       <div>
-        <label htmlFor="base_price" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="base_price" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Precio base (ARS) <span aria-hidden="true" className="text-red-500">*</span>
         </label>
         <input
@@ -213,7 +215,7 @@ export function CourtForm({ court, onSuccess, onCancel }: CourtFormProps) {
 
       {/* Duracion del turno */}
       <div>
-        <label htmlFor="slot_duration" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="slot_duration" className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
           Duracion del turno (min) <span aria-hidden="true" className="text-red-500">*</span>
         </label>
         <select

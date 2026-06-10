@@ -80,12 +80,12 @@ function SlotRow({ slot, price, onReserve }: SlotRowProps) {
 
   if (!slot.is_available) {
     return (
-      <li className="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-50 border border-gray-100">
-        <div className="flex items-center gap-2 text-gray-400">
+      <li className="flex items-center justify-between py-3 px-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+        <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
           <Clock size={15} aria-hidden="true" />
           <span className="text-sm font-medium">{timeRange}</span>
         </div>
-        <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+        <span className="text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-full">
           Ocupado
         </span>
       </li>
@@ -190,15 +190,15 @@ function BookingModal({
         <div className="flex flex-col items-center py-4 text-center gap-4">
           <CheckCircle2 size={48} className="text-green-500" aria-hidden="true" />
           <div className="space-y-1">
-            <p className="text-base font-semibold text-gray-900">Reserva confirmada</p>
-            <p className="text-sm text-gray-600">
+            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Reserva confirmada</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Turno: {courtName} · {successData.timeRange}
             </p>
             <p className="text-sm font-medium text-brand-700">
               Número de reserva: #{successData.bookingId}
             </p>
           </div>
-          <p className="text-sm text-gray-500 leading-relaxed">
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
             Presentate en recepcion para confirmar la seña.
           </p>
           <Button variant="primary" onClick={handleClose} fullWidth>
@@ -208,12 +208,12 @@ function BookingModal({
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-5">
           {/* Resumen del turno */}
-          <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 space-y-1.5 text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
+          <div className="rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 px-4 py-3 space-y-1.5 text-sm">
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
               <MapPin size={14} aria-hidden="true" />
               <span className="font-medium">{courtName}</span>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
+            <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
               <Clock size={14} aria-hidden="true" />
               <span>{timeRange}</span>
             </div>
@@ -231,7 +231,7 @@ function BookingModal({
           <div className="space-y-1">
             <label
               htmlFor="guest_name"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-200"
             >
               Nombre completo <span aria-hidden="true" className="text-red-500">*</span>
             </label>
@@ -246,8 +246,8 @@ function BookingModal({
                 'focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
                 'transition-colors placeholder:text-gray-400',
                 errors.guest_name
-                  ? 'border-red-400 bg-red-50'
-                  : 'border-gray-300 bg-white',
+                  ? 'border-red-400 bg-red-50 dark:bg-red-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-100',
               ].join(' ')}
             />
             {errors.guest_name && (
@@ -261,7 +261,7 @@ function BookingModal({
           <div className="space-y-1">
             <label
               htmlFor="guest_phone"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-200"
             >
               Telefono <span aria-hidden="true" className="text-red-500">*</span>
             </label>
@@ -276,8 +276,8 @@ function BookingModal({
                 'focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
                 'transition-colors placeholder:text-gray-400',
                 errors.guest_phone
-                  ? 'border-red-400 bg-red-50'
-                  : 'border-gray-300 bg-white',
+                  ? 'border-red-400 bg-red-50 dark:bg-red-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-100',
               ].join(' ')}
             />
             {errors.guest_phone && (
@@ -291,7 +291,7 @@ function BookingModal({
           <div className="space-y-1">
             <label
               htmlFor="guest_email"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-200"
             >
               Email{' '}
               <span className="text-gray-400 font-normal">(opcional — para recibir confirmacion)</span>
@@ -307,8 +307,8 @@ function BookingModal({
                 'focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
                 'transition-colors placeholder:text-gray-400',
                 errors.guest_email
-                  ? 'border-red-400 bg-red-50'
-                  : 'border-gray-300 bg-white',
+                  ? 'border-red-400 bg-red-50 dark:bg-red-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-100',
               ].join(' ')}
             />
             {errors.guest_email && (
@@ -385,9 +385,9 @@ export function BookingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-4">
         <div className="max-w-lg mx-auto flex items-center gap-3">
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0">
             <span className="text-white font-bold text-sm" aria-hidden="true">
@@ -395,10 +395,10 @@ export function BookingPage() {
             </span>
           </div>
           <div>
-            <h1 className="text-base font-semibold text-gray-900 leading-tight">
+            <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">
               Reserva tu turno
             </h1>
-            <p className="text-xs text-gray-500">Elegí cancha, dia y horario</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Elegí cancha, dia y horario</p>
           </div>
         </div>
       </header>
@@ -408,7 +408,7 @@ export function BookingPage() {
         <div className="space-y-1.5">
           <label
             htmlFor="court-select"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-200"
           >
             Cancha
           </label>
@@ -426,7 +426,7 @@ export function BookingPage() {
               id="court-select"
               value={effectiveCourtId}
               onChange={(e) => setSelectedCourtId(Number(e.target.value))}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-gray-100 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             >
               {courts.map((court) => (
                 <option key={court.id} value={court.id}>
@@ -457,7 +457,7 @@ export function BookingPage() {
               value={selectedDate}
               min={todayLocalDate()}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-gray-100 pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             />
           </div>
         </div>

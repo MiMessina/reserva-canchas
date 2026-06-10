@@ -17,6 +17,7 @@
  *   /admin/cashbox      → CashboxPage (caja diaria — JWT)
  *   /admin/grid         → DailyGridPage (grilla multi-cancha — JWT)
  *   /admin/operators    → OperatorsPage (gestion de operadores — tenant_admin)
+ *   /admin/agent        → ChatDemoPage (chat demo con agente IA — JWT)
  *
  * Layout:
  *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
@@ -36,6 +37,7 @@ import { BookingsAdminPage } from '@/features/booking/pages/BookingsAdminPage'
 import { CashboxPage } from '@/features/booking/pages/CashboxPage'
 import { DailyGridPage } from '@/features/booking/pages/DailyGridPage'
 import { OperatorsPage } from '@/features/users/pages/OperatorsPage'
+import { ChatDemoPage } from '@/features/agent/ChatDemoPage'
 
 const router = createBrowserRouter([
   {
@@ -84,6 +86,10 @@ const router = createBrowserRouter([
           {
             path: '/admin/operators',
             element: <OperatorsPage />,
+          },
+          {
+            path: '/admin/agent',
+            element: <ChatDemoPage />,
           },
         ],
       },

@@ -135,7 +135,7 @@ function CancelModal({ isOpen, booking, onClose }: CancelModalProps) {
     >
       <div className="space-y-4">
         {booking && (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Vas a cancelar la reserva de{' '}
             <span className="font-semibold">{booking.guest_name || 'un jugador'}</span>{' '}
             en <span className="font-semibold">{booking.court_name}</span>{' '}
@@ -146,7 +146,7 @@ function CancelModal({ isOpen, booking, onClose }: CancelModalProps) {
         <div className="space-y-1">
           <label
             htmlFor="cancel-reason"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-200"
           >
             Motivo (opcional)
           </label>
@@ -156,7 +156,7 @@ function CancelModal({ isOpen, booking, onClose }: CancelModalProps) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="Ej: El jugador solicito la baja."
-            className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 resize-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder-gray-400 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 resize-none"
           />
         </div>
 
@@ -209,12 +209,12 @@ function BookingCard({
     booking.status === 'CONFIRMED' && isInPast(booking.end_dt)
 
   return (
-    <li className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <li className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
       {/* Encabezado */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-gray-900">{booking.court_name}</p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{booking.court_name}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             {formatDateTimeBA(booking.start_dt)}
           </p>
         </div>
@@ -222,14 +222,14 @@ function BookingCard({
       </div>
 
       {/* Detalle */}
-      <div className="px-4 py-3 space-y-1 text-sm text-gray-600">
+      <div className="px-4 py-3 space-y-1 text-sm text-gray-600 dark:text-gray-300">
         <div className="flex items-center gap-1.5">
           <User size={13} className="text-gray-400 shrink-0" aria-hidden="true" />
-          <span className="text-gray-500 truncate">{contactLabel(booking)}</span>
+          <span className="text-gray-500 dark:text-gray-400 truncate">{contactLabel(booking)}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-gray-500">Precio</span>
-          <span className="font-semibold text-gray-900">
+          <span className="text-gray-500 dark:text-gray-400">Precio</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">
             {formatARS(booking.price)}
           </span>
         </div>
@@ -305,14 +305,14 @@ function BookingRow({
     booking.status === 'CONFIRMED' && isInPast(booking.end_dt)
 
   return (
-    <tr className="hover:bg-gray-50 transition-colors">
-      <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 font-medium">
         {booking.court_name}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-600">
+      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
         {formatDateTimeBA(booking.start_dt)}
       </td>
-      <td className="px-4 py-3 text-sm text-gray-700">
+      <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
         <div className="flex items-center gap-1.5">
           <User size={13} className="text-gray-400 shrink-0" aria-hidden="true" />
           <span className="truncate max-w-[180px]">{contactLabel(booking)}</span>
@@ -321,7 +321,7 @@ function BookingRow({
       <td className="px-4 py-3">
         <StatusBadge status={booking.status} />
       </td>
-      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+      <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">
         {formatARS(booking.price)}
       </td>
       <td className="px-4 py-3">
@@ -429,13 +429,13 @@ export function BookingsAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <ClipboardList size={20} className="text-brand-600" aria-hidden="true" />
-            <h1 className="text-base font-semibold text-gray-900">Reservas</h1>
+            <h1 className="text-base font-semibold text-gray-900 dark:text-gray-100">Reservas</h1>
           </div>
           <a
             href="/booking"
@@ -452,9 +452,9 @@ export function BookingsAdminPage() {
         {/* Panel de filtros */}
         <section
           aria-label="Filtros de reservas"
-          className="bg-white rounded-xl border border-gray-200 px-4 py-4 space-y-4"
+          className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-4 space-y-4"
         >
-          <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
             <Filter size={15} aria-hidden="true" />
             <span>Filtrar</span>
           </div>
@@ -464,7 +464,7 @@ export function BookingsAdminPage() {
             <div className="space-y-1">
               <label
                 htmlFor="filter-date-from"
-                className="block text-xs font-medium text-gray-600"
+                className="block text-xs font-medium text-gray-600 dark:text-gray-400"
               >
                 Desde
               </label>
@@ -473,7 +473,7 @@ export function BookingsAdminPage() {
                 type="date"
                 value={filters.date_from ?? ''}
                 onChange={(e) => updateFilter('date_from', e.target.value || undefined)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
 
@@ -481,7 +481,7 @@ export function BookingsAdminPage() {
             <div className="space-y-1">
               <label
                 htmlFor="filter-date-to"
-                className="block text-xs font-medium text-gray-600"
+                className="block text-xs font-medium text-gray-600 dark:text-gray-400"
               >
                 Hasta
               </label>
@@ -490,7 +490,7 @@ export function BookingsAdminPage() {
                 type="date"
                 value={filters.date_to ?? ''}
                 onChange={(e) => updateFilter('date_to', e.target.value || undefined)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
 
@@ -498,7 +498,7 @@ export function BookingsAdminPage() {
             <div className="space-y-1">
               <label
                 htmlFor="filter-status"
-                className="block text-xs font-medium text-gray-600"
+                className="block text-xs font-medium text-gray-600 dark:text-gray-400"
               >
                 Estado
               </label>
@@ -511,7 +511,7 @@ export function BookingsAdminPage() {
                     (e.target.value as BookingStatus) || undefined,
                   )
                 }
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="">Todos</option>
                 {(Object.keys(STATUS_LABELS) as BookingStatus[]).map((s) => (
@@ -526,7 +526,7 @@ export function BookingsAdminPage() {
             <div className="space-y-1">
               <label
                 htmlFor="filter-court"
-                className="block text-xs font-medium text-gray-600"
+                className="block text-xs font-medium text-gray-600 dark:text-gray-400"
               >
                 Cancha
               </label>
@@ -539,7 +539,7 @@ export function BookingsAdminPage() {
                     e.target.value ? Number(e.target.value) : undefined,
                   )
                 }
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 dark:text-gray-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 <option value="">Todas</option>
                 {courts.map((c) => (
@@ -592,10 +592,10 @@ export function BookingsAdminPage() {
             </ul>
 
             {/* Tabla desktop (>= md) */}
-            <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     <th className="px-4 py-3">Cancha</th>
                     <th className="px-4 py-3">Fecha / Hora</th>
                     <th className="px-4 py-3">Jugador</th>
@@ -607,7 +607,7 @@ export function BookingsAdminPage() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {bookings.map((booking) => (
                     <BookingRow
                       key={booking.id}
@@ -628,7 +628,7 @@ export function BookingsAdminPage() {
         {/* Paginacion */}
         {!isLoading && !isError && (data?.count ?? 0) > 0 && (
           <div className="flex items-center justify-between mt-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Pagina {page} · {data?.count ?? 0} reserva{(data?.count ?? 0) !== 1 ? 's' : ''} en total
             </p>
             <div className="flex gap-2">
@@ -636,7 +636,7 @@ export function BookingsAdminPage() {
                 type="button"
                 onClick={() => setPage((p) => p - 1)}
                 disabled={!data?.previous}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Anterior
               </button>
@@ -644,7 +644,7 @@ export function BookingsAdminPage() {
                 type="button"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={!data?.next}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Siguiente
               </button>

@@ -109,10 +109,10 @@ export function DashboardPage() {
           <LayoutDashboard size={28} strokeWidth={1.8} aria-hidden="true" />
         </span>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 leading-tight">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">
             Panel de inicio
           </h1>
-          <p className="text-sm text-gray-500 capitalize">
+          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
             {todayLabelBA()}
           </p>
         </div>
@@ -123,11 +123,11 @@ export function DashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <h2
             id="bookings-heading"
-            className="text-sm font-semibold text-gray-700 uppercase tracking-wide"
+            className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide"
           >
             Reservas de hoy
           </h2>
-          <span className="text-xs font-medium bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5">
+          <span className="text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full px-2.5 py-0.5">
             {totalHoy} {totalHoy === 1 ? 'turno' : 'turnos'} hoy
           </span>
         </div>
@@ -161,7 +161,7 @@ export function DashboardPage() {
       <section aria-labelledby="status-heading">
         <h2
           id="status-heading"
-          className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3"
+          className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3"
         >
           Estado actual
         </h2>
@@ -170,16 +170,16 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           {/* Tarjeta — Canchas */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-3">
-            <div className="flex items-center gap-2 text-gray-700">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-3">
+            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <Layers size={18} strokeWidth={1.8} aria-hidden="true" />
               <span className="font-semibold text-sm">Canchas ocupadas ahora</span>
             </div>
-            <p className="text-3xl font-bold text-gray-900">
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               {data ? (
                 <>
                   {courtsOccupied}
-                  <span className="text-base font-normal text-gray-400 ml-1">
+                  <span className="text-base font-normal text-gray-400 dark:text-gray-500 ml-1">
                     / {courtsTotal}
                   </span>
                 </>
@@ -187,7 +187,7 @@ export function DashboardPage() {
             </p>
             {/* Barra de progreso */}
             <div
-              className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden"
+              className="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden"
               role="progressbar"
               aria-valuenow={occupancyPct}
               aria-valuemin={0}
@@ -199,14 +199,14 @@ export function DashboardPage() {
                 style={{ width: `${occupancyPct}%` }}
               />
             </div>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {occupancyPct}% de ocupación
             </p>
           </div>
 
           {/* Tarjeta — Caja del día */}
-          <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-2">
-            <div className="flex items-center gap-2 text-gray-700">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-2">
+            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <Banknote size={18} strokeWidth={1.8} aria-hidden="true" />
               <span className="font-semibold text-sm">Caja del día</span>
             </div>
@@ -220,7 +220,7 @@ export function DashboardPage() {
             <p className="text-sm text-green-700 font-medium">
               Ingresos: {formatARS(cashIngresos)}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {data?.cashbox_today?.movements_count ?? 0} movimiento
               {(data?.cashbox_today?.movements_count ?? 0) !== 1 ? 's' : ''} registrado
               {(data?.cashbox_today?.movements_count ?? 0) !== 1 ? 's' : ''}
@@ -234,28 +234,28 @@ export function DashboardPage() {
       <section aria-labelledby="quicklinks-heading">
         <h2
           id="quicklinks-heading"
-          className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3"
+          className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3"
         >
           Accesos rápidos
         </h2>
         <div className="flex flex-wrap gap-3">
           <Link
             to="/admin/bookings"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <CalendarCheck size={16} aria-hidden="true" />
             Reservas
           </Link>
           <Link
             to="/admin/cashbox"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Banknote size={16} aria-hidden="true" />
             Caja diaria
           </Link>
           <Link
             to="/admin/courts"
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Layers size={16} aria-hidden="true" />
             Canchas

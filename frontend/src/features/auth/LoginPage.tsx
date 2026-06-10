@@ -49,7 +49,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
         {/* Logo / Marca */}
         <div className="flex justify-center">
@@ -57,16 +57,16 @@ export function LoginPage() {
             <span className="text-white font-bold text-xl">C</span>
           </div>
         </div>
-        <h1 className="mt-6 text-center text-2xl font-bold text-gray-900">
+        <h1 className="mt-6 text-center text-2xl font-bold text-gray-900 dark:text-gray-100">
           CanchaYA
         </h1>
-        <p className="mt-1 text-center text-sm text-gray-500">
+        <p className="mt-1 text-center text-sm text-gray-500 dark:text-gray-400">
           Ingresá a tu cuenta
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-sm">
-        <div className="bg-white py-8 px-4 shadow-sm rounded-2xl sm:px-8">
+        <div className="bg-white dark:bg-gray-800 py-8 px-4 shadow-sm rounded-2xl sm:px-8">
           {/* Error de login desde la API */}
           {loginError && (
             <div className="mb-5" role="alert">
@@ -83,7 +83,7 @@ export function LoginPage() {
             <div className="mb-4">
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
               >
                 Email
               </label>
@@ -96,6 +96,7 @@ export function LoginPage() {
                 aria-describedby={errors.email ? 'email-error' : undefined}
                 className={`w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm
                   focus:outline-none focus:ring-2 focus:ring-brand-500
+                  dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400
                   ${errors.email
                     ? 'border-red-400 focus:ring-red-400'
                     : 'border-gray-300'
@@ -114,7 +115,7 @@ export function LoginPage() {
             <div className="mb-6">
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1"
               >
                 Contraseña
               </label>
@@ -126,6 +127,7 @@ export function LoginPage() {
                 aria-describedby={errors.password ? 'password-error' : undefined}
                 className={`w-full rounded-lg border px-3 py-2.5 text-sm shadow-sm
                   focus:outline-none focus:ring-2 focus:ring-brand-500
+                  dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100 dark:placeholder-gray-400
                   ${errors.password
                     ? 'border-red-400 focus:ring-red-400'
                     : 'border-gray-300'

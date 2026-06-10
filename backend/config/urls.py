@@ -64,6 +64,9 @@ urlpatterns = [
     # Bookings (motor de reservas) y CashMovements — Sprint 2
     path("api/", include("apps.bookings.urls")),
 
+    # Agente IA conversacional (ADR-012) — Sprint 3
+    path("api/", include("apps.agent.urls")),
+
     # Swagger / OpenAPI (drf-spectacular)
     # AllowAny explícito para que no lo bloquee el DEFAULT_PERMISSION_CLASSES=IsAuthenticated
     path(

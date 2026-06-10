@@ -72,17 +72,17 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       {/* Panel */}
       <div
         className={[
-          'relative z-10 w-full bg-white',
+          'relative z-10 w-full bg-white dark:bg-gray-800',
           'rounded-t-2xl sm:rounded-2xl shadow-xl',
           'max-h-[90vh] overflow-y-auto',
           sizeClasses[size],
         ].join(' ')}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
           <h2
             id="modal-title"
-            className="text-base font-semibold text-gray-900"
+            className="text-base font-semibold text-gray-900 dark:text-gray-100"
           >
             {title}
           </h2>
@@ -90,7 +90,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             type="button"
             onClick={onClose}
             aria-label="Cerrar modal"
-            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="rounded-lg p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-gray-500 dark:hover:text-gray-300 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <X size={18} />
           </button>

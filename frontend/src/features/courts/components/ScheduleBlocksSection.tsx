@@ -69,7 +69,7 @@ export function ScheduleBlocksSection({ courtId, canEdit }: ScheduleBlocksSectio
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
           Horarios
         </h3>
         {canEdit && (
@@ -117,8 +117,8 @@ export function ScheduleBlocksSection({ courtId, canEdit }: ScheduleBlocksSectio
               className={[
                 'flex items-center justify-between rounded-xl border px-4 py-3',
                 block.is_active
-                  ? 'bg-white border-gray-200'
-                  : 'bg-gray-50 border-gray-200 opacity-60',
+                  ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                  : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 opacity-60',
               ].join(' ')}
             >
               <div className="flex items-center gap-3 min-w-0">
@@ -128,10 +128,10 @@ export function ScheduleBlocksSection({ courtId, canEdit }: ScheduleBlocksSectio
                   aria-hidden="true"
                 />
                 <div className="min-w-0">
-                  <span className="block text-sm font-medium text-gray-800">
+                  <span className="block text-sm font-medium text-gray-800 dark:text-gray-200">
                     {WEEKDAY_LABELS[block.weekday as Weekday]}
                   </span>
-                  <span className="block text-xs text-gray-500">
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">
                     {block.open_time.slice(0, 5)} - {block.close_time.slice(0, 5)}
                   </span>
                 </div>

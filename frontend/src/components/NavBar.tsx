@@ -16,8 +16,9 @@
 
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, LayoutGrid, CalendarCheck, Wallet, LogOut, TableProperties, Users } from 'lucide-react'
+import { Home, LayoutGrid, CalendarCheck, Wallet, LogOut, TableProperties, Users, MessageCircle, Moon, Sun } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
+import { useThemeContext } from '@/context/ThemeContext'
 
 export interface NavBarProps {
   user: Pick<JWTPayload, 'email' | 'role'> | null
@@ -68,6 +69,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <Users size={20} aria-hidden="true" />,
     allowedRoles: ['tenant_admin'],
   },
+  {
+    to: '/admin/agent',
+    label: 'Asistente',
+    icon: <MessageCircle size={20} aria-hidden="true" />,
+    allowedRoles: ['tenant_admin', 'operator'],
+  },
 ]
 
 /** Clases del link activo para la topbar de desktop */
@@ -76,8 +83,8 @@ function desktopLinkClasses({ isActive }: { isActive: boolean }) {
     'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
     'focus:outline-none focus:ring-2 focus:ring-brand-500',
     isActive
-      ? 'bg-brand-50 text-brand-700'
-      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100',
+      ? 'bg-brand-50 text-brand-700 dark:bg-brand-900 dark:text-brand-300'
+      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-gray-100 dark:hover:bg-gray-800',
   ].join(' ')
 }
 
@@ -87,11 +94,15 @@ function mobileLinkClasses({ isActive }: { isActive: boolean }) {
     'flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[48px]',
     'text-xs font-medium transition-colors',
     'focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500',
-    isActive ? 'text-brand-600' : 'text-gray-500 hover:text-gray-800',
+    isActive
+      ? 'text-brand-600 dark:text-brand-400'
+      : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200',
   ].join(' ')
 }
 
 export function NavBar({ user, onLogout }: NavBarProps) {
+  const { theme, toggle } = useThemeContext()
+
   const visibleItems = NAV_ITEMS.filter(
     (item) =>
       !item.allowedRoles || (user?.role && item.allowedRoles.includes(user.role)),
@@ -101,7 +112,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
     <>
       {/* ── TOP BAR (desktop md+) ───────────────────────────────────────── */}
       <header
-        className="hidden md:flex fixed top-0 inset-x-0 z-40 h-16 bg-white border-b border-gray-200 items-center px-6 gap-4"
+        className="hidden md:flex fixed top-0 inset-x-0 z-40 h-16 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 items-center px-6 gap-4"
         role="banner"
       >
         {/* Logo */}
@@ -112,7 +123,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
           >
             <span className="text-white font-bold text-sm">C</span>
           </div>
-          <span className="text-base font-semibold text-gray-900 tracking-tight">
+          <span className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
             CanchaYA
           </span>
         </div>
@@ -127,23 +138,32 @@ export function NavBar({ user, onLogout }: NavBarProps) {
           ))}
         </nav>
 
-        {/* Email + logout */}
+        {/* Email + toggle + logout */}
         <div className="flex items-center gap-3 shrink-0">
           {user?.email && (
             <span
-              className="text-sm text-gray-500 max-w-[200px] truncate"
+              className="text-sm text-gray-500 dark:text-gray-400 max-w-[200px] truncate"
               title={user.email}
             >
               {user.email}
             </span>
           )}
+          {/* Boton toggle dark mode */}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+          </button>
           <button
             type="button"
             onClick={onLogout}
             aria-label="Cerrar sesion"
             className={[
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium',
-              'text-gray-600 hover:text-red-600 hover:bg-red-50 transition-colors',
+              'text-gray-600 hover:text-red-600 hover:bg-red-50 dark:text-gray-300 dark:hover:bg-red-900/20 transition-colors',
               'focus:outline-none focus:ring-2 focus:ring-red-400',
             ].join(' ')}
           >
@@ -155,7 +175,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
 
       {/* ── BOTTOM TAB BAR (mobile, oculta en md+) ──────────────────────── */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 dark:bg-gray-900 dark:border-gray-700 flex"
         aria-label="Navegacion principal"
       >
         {visibleItems.map((item) => (
@@ -183,7 +203,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
 
       {/* ── TOP BAR COMPACTA (mobile, solo logo) ────────────────────────── */}
       <header
-        className="md:hidden fixed top-0 inset-x-0 z-40 h-14 bg-white border-b border-gray-200 flex items-center px-4 gap-2"
+        className="md:hidden fixed top-0 inset-x-0 z-40 h-14 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-700 flex items-center px-4 gap-2"
         role="banner"
       >
         <div
@@ -192,7 +212,16 @@ export function NavBar({ user, onLogout }: NavBarProps) {
         >
           <span className="text-white font-bold text-xs">C</span>
         </div>
-        <span className="text-sm font-semibold text-gray-900">CanchaYA</span>
+        <span className="text-sm font-semibold text-gray-900 dark:text-white">CanchaYA</span>
+        {/* Boton toggle dark mode en mobile */}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          className="ml-auto flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
+        >
+          {theme === 'dark' ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+        </button>
       </header>
     </>
   )
