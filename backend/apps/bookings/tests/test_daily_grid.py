@@ -154,7 +154,10 @@ class TestDailyGrid(TenantTestCase):
         self.assertGreater(len(court_data["slots"]), 0)
 
         slot = court_data["slots"][0]
-        required_keys = {"start_dt", "end_dt", "status", "booking_id", "guest_name", "price"}
+        required_keys = {
+            "start_dt", "end_dt", "status", "booking_id", "guest_name", "price",
+            "block_id", "block_reason",
+        }
         self.assertEqual(set(slot.keys()), required_keys)
 
     # -----------------------------------------------------------------------

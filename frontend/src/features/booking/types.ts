@@ -115,7 +115,7 @@ export interface CashDailySummary {
 
 // ─── Grilla multi-cancha ──────────────────────────────────────────────────────
 
-export type SlotStatus = 'AVAILABLE' | 'PENDING_PAYMENT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED'
+export type SlotStatus = 'AVAILABLE' | 'PENDING_PAYMENT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'BLOCKED'
 
 export interface DailyGridSlot {
   start_dt: string        // ISO 8601 UTC
@@ -124,6 +124,8 @@ export interface DailyGridSlot {
   booking_id: number | null
   guest_name: string | null
   price: string | null    // decimal string
+  block_id: number | null       // presente si status === 'BLOCKED'
+  block_reason: string | null   // motivo del bloqueo (puede ser null)
 }
 
 export interface DailyGridCourt {

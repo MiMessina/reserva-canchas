@@ -32,7 +32,7 @@ import logging
 
 from rest_framework.exceptions import ValidationError
 
-from apps.courts.models import Court, ScheduleBlock
+from apps.courts.models import Court, ScheduleBlock, SlotBlock
 
 logger = logging.getLogger(__name__)
 
@@ -263,3 +263,66 @@ def deactivate_schedule_block(*, schedule_block: ScheduleBlock) -> ScheduleBlock
     schedule_block.save(update_fields=["is_active", "updated_at"])
     logger.info("Bloque horario desactivado (soft-delete): id=%s", schedule_block.pk)
     return schedule_block
+
+
+# ---------------------------------------------------------------------------
+# SlotBlock
+# ---------------------------------------------------------------------------
+
+def create_slot_block(
+    court: Court,
+    start_dt,
+    end_dt,
+    reason: str = "",
+    created_by=None,
+) -> SlotBlock:
+    """
+    Crea un bloqueo manual de slot para una cancha.
+
+    Parámetros:
+      court       — instancia Court activa.
+      start_dt    — datetime timezone-aware en UTC; inicio del bloqueo.
+      end_dt      — datetime timezone-aware en UTC; fin del bloqueo.
+      reason      — motivo del bloqueo (opcional).
+      created_by  — instancia User (operator o admin) que crea el bloqueo.
+
+    Lanza ValidationError si start_dt >= end_dt (código INVALID_SCHEDULE).
+
+    Retorna la instancia SlotBlock creada.
+    """
+    if start_dt >= end_dt:
+        raise ValidationError(
+            {
+                "non_field_errors": [
+                    {
+                        "code": "INVALID_SCHEDULE",
+                        "message": "start_dt debe ser anterior a end_dt.",
+                    }
+                ]
+            }
+        )
+
+    block = SlotBlock.objects.create(
+        court=court,
+        start_dt=start_dt,
+        end_dt=end_dt,
+        reason=reason,
+        created_by=created_by,
+        is_active=True,
+    )
+    logger.info(
+        "SlotBlock creado: id=%s court=%s start=%s end=%s",
+        block.pk, court.pk, start_dt, end_dt,
+    )
+    return block
+
+
+def delete_slot_block(block: SlotBlock) -> None:
+    """
+    Soft-delete de un bloqueo de slot (is_active=False).
+
+    Prohibido DELETE físico (RULES.md §4). El registro sigue en DB.
+    """
+    block.is_active = False
+    block.save(update_fields=["is_active", "updated_at"])
+    logger.info("SlotBlock desactivado (soft-delete): id=%s", block.pk)

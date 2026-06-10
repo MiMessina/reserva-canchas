@@ -163,6 +163,41 @@ class BookingCreateSerializer(serializers.Serializer):
     )
 
 
+class GuestBookingSerializer(serializers.ModelSerializer):
+    """
+    Serializer público para la vista "Mis reservas" de invitados.
+
+    Usado por GuestLookupView y CancelGuestView. Expone los campos
+    necesarios para que el invitado identifique y gestione su reserva
+    sin revelar datos de terceros.
+    """
+
+    court_name = serializers.CharField(
+        source="court.name",
+        read_only=True,
+        help_text="Nombre de la cancha.",
+    )
+    status_display = serializers.CharField(
+        source="get_status_display",
+        read_only=True,
+        help_text="Etiqueta legible del estado de la reserva.",
+    )
+
+    class Meta:
+        model = Booking
+        fields = [
+            "id",
+            "court",
+            "court_name",
+            "start_dt",
+            "end_dt",
+            "status",
+            "status_display",
+            "price",
+        ]
+        read_only_fields = fields
+
+
 class BookingCancelSerializer(serializers.Serializer):
     """
     Serializer de escritura para cancelar una reserva.

@@ -13,7 +13,7 @@ Serializers:
 
 from rest_framework import serializers
 
-from apps.courts.models import Court, ScheduleBlock
+from apps.courts.models import Court, ScheduleBlock, SlotBlock
 
 
 class CourtSerializer(serializers.ModelSerializer):
@@ -104,3 +104,36 @@ class ScheduleBlockSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "court_name", "weekday_display", "is_active", "created_at", "updated_at"]
+
+
+class SlotBlockSerializer(serializers.ModelSerializer):
+    """
+    Serializer de lectura y escritura para SlotBlock.
+
+    Expone los campos del bloqueo manual de slots.
+    El campo created_by y is_active son de solo lectura (los asigna la view/service).
+    start_dt y end_dt son datetime timezone-aware en UTC.
+
+    Permisos de escritura: operator o tenant_admin (controlado en la view).
+    """
+
+    court_name = serializers.CharField(
+        source="court.name",
+        read_only=True,
+        help_text="Nombre de la cancha bloqueada.",
+    )
+
+    class Meta:
+        model = SlotBlock
+        fields = [
+            "id",
+            "court",
+            "court_name",
+            "start_dt",
+            "end_dt",
+            "reason",
+            "created_by",
+            "is_active",
+            "created_at",
+        ]
+        read_only_fields = ["id", "court_name", "created_by", "is_active", "created_at"]

@@ -4,17 +4,19 @@ Views — app bookings
 ViewSets y Views para Booking, CashMovement y disponibilidad.
 
 Endpoints registrados en apps/bookings/urls.py:
-  GET    /api/bookings/                     — listado (admin/operator)
-  POST   /api/bookings/                     — crear reserva (AllowAny)
-  GET    /api/bookings/{id}/                — detalle (admin/operator/propio jugador)
-  POST   /api/bookings/{id}/confirm/        — confirmar (operator/admin)
-  POST   /api/bookings/{id}/cancel/         — cancelar (autenticado; jugador solo la suya)
-  POST   /api/bookings/{id}/complete/       — completar (operator/admin)
-  GET    /api/cash-movements/               — caja (operator/admin; filtro ?date=YYYY-MM-DD)
-  GET    /api/cash-movements/export/        — exportar caja en CSV (operator/admin)
-  GET    /api/dashboard/                    — resumen del día para el panel de inicio (operator/admin)
-  GET    /api/bookings/daily-grid/          — grilla multi-cancha del día (operator/admin)
-  GET    /api/bookings/weekly-report/       — reporte semanal de ocupación y caja (operator/admin)
+  GET    /api/bookings/                         — listado (admin/operator)
+  POST   /api/bookings/                         — crear reserva (AllowAny)
+  GET    /api/bookings/{id}/                    — detalle (admin/operator/propio jugador)
+  POST   /api/bookings/{id}/confirm/            — confirmar (operator/admin)
+  POST   /api/bookings/{id}/cancel/             — cancelar (autenticado; jugador solo la suya)
+  POST   /api/bookings/{id}/complete/           — completar (operator/admin)
+  GET    /api/bookings/guest-lookup/?phone=XXXX — reservas activas del jugador por teléfono (público)
+  POST   /api/bookings/{id}/cancel-guest/       — cancelar reserva propia por teléfono (público)
+  GET    /api/cash-movements/                   — caja (operator/admin; filtro ?date=YYYY-MM-DD)
+  GET    /api/cash-movements/export/            — exportar caja en CSV (operator/admin)
+  GET    /api/dashboard/                        — resumen del día para el panel de inicio (operator/admin)
+  GET    /api/bookings/daily-grid/              — grilla multi-cancha del día (operator/admin)
+  GET    /api/bookings/weekly-report/           — reporte semanal de ocupación y caja (operator/admin)
   GET    /api/courts/{court_id}/availability/?date=YYYY-MM-DD  — grilla (AllowAny)
 
 Reglas:
@@ -49,6 +51,7 @@ from apps.bookings.serializers import (
     CashDailySummarySerializer,
     CashMovementSerializer,
     DashboardSerializer,
+    GuestBookingSerializer,
     WeeklyReportSerializer,
 )
 from apps.bookings.services import (
@@ -812,3 +815,162 @@ class WeeklyReportView(APIView):
             )
 
         return Response(WeeklyReportSerializer(data).data)
+
+
+class GuestLookupView(APIView):
+    """
+    Vista pública para buscar reservas activas de un invitado por teléfono.
+
+    GET /api/bookings/guest-lookup/?phone=XXXX
+
+    El teléfono actúa como identificador del invitado. Retorna reservas en
+    estado PENDING_PAYMENT o CONFIRMED del guest_phone dado, ordenadas por
+    start_dt ascendente. Si no hay resultados, retorna lista vacía.
+
+    Parámetros:
+      phone — teléfono del invitado (query param, requerido, mínimo 6 caracteres).
+
+    Permisos: AllowAny (el teléfono actúa como identificador).
+    """
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        summary="Mis reservas por teléfono (invitado)",
+        description=(
+            "Retorna las reservas activas (PENDING_PAYMENT o CONFIRMED) del invitado "
+            "identificado por su teléfono. Público: no requiere JWT. "
+            "El parámetro phone debe tener al menos 6 caracteres."
+        ),
+        parameters=[
+            OpenApiParameter(
+                "phone",
+                type=str,
+                required=True,
+                description="Teléfono del invitado (mínimo 6 caracteres).",
+            ),
+        ],
+        tags=["bookings"],
+        responses={200: GuestBookingSerializer(many=True)},
+    )
+    def get(self, request):
+        phone = request.query_params.get("phone", "").strip()
+
+        if not phone:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "El parámetro 'phone' es obligatorio.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(phone) < 6:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "El teléfono debe tener al menos 6 caracteres.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        bookings = (
+            Booking.objects.filter(
+                is_active=True,
+                guest_phone=phone,
+                status__in=[Booking.Status.PENDING_PAYMENT, Booking.Status.CONFIRMED],
+            )
+            .select_related("court")
+            .order_by("start_dt")
+        )
+
+        return Response(GuestBookingSerializer(bookings, many=True).data)
+
+
+class CancelGuestView(APIView):
+    """
+    Vista pública para que un invitado cancele su propia reserva usando su teléfono.
+
+    POST /api/bookings/{pk}/cancel-guest/
+    Body: {"guest_phone": "XXXX"}
+
+    Valida que booking.guest_phone == guest_phone del body.
+    Llama a cancel_booking() del service existente.
+
+    Permisos: AllowAny (el teléfono actúa como identificador).
+    Errores:
+      400 — guest_phone ausente.
+      403 FORBIDDEN — teléfono no coincide.
+      404 — booking no existe o inactivo.
+      409 INVALID_TRANSITION — ya CANCELLED o COMPLETED.
+    """
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        summary="Cancelar reserva propia (invitado por teléfono)",
+        description=(
+            "Permite al invitado cancelar su propia reserva usando su teléfono como verificación. "
+            "Retorna 403 si el teléfono no coincide, 409 si la reserva no se puede cancelar."
+        ),
+        request={"application/json": {"type": "object", "properties": {"guest_phone": {"type": "string"}}}},
+        tags=["bookings"],
+        responses={200: GuestBookingSerializer},
+    )
+    def post(self, request, pk):
+        guest_phone = request.data.get("guest_phone", "").strip()
+
+        if not guest_phone:
+            return Response(
+                {
+                    "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "El campo 'guest_phone' es obligatorio.",
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        booking = get_object_or_404(
+            Booking.objects.filter(is_active=True).select_related("court"),
+            pk=pk,
+        )
+
+        # Verificar que el teléfono coincide con el de la reserva
+        if booking.guest_phone.strip() != guest_phone:
+            return Response(
+                {
+                    "error": {
+                        "code": "FORBIDDEN",
+                        "message": "El teléfono no coincide con el de la reserva.",
+                    }
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Verificar transición válida antes de llamar al service
+        if booking.status in (Booking.Status.CANCELLED, Booking.Status.COMPLETED):
+            return Response(
+                {
+                    "error": {
+                        "code": "INVALID_TRANSITION",
+                        "message": (
+                            f"No se puede cancelar una reserva en estado "
+                            f"'{booking.get_status_display()}'."
+                        ),
+                        "details": {"current_status": booking.status},
+                    }
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        updated = cancel_booking(
+            booking=booking,
+            cancelled_by=None,
+            reason="Cancelado por el jugador.",
+        )
+        return Response(GuestBookingSerializer(updated).data)

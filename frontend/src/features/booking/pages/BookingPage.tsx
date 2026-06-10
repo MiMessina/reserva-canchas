@@ -16,6 +16,7 @@
  */
 
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -500,6 +501,14 @@ export function BookingPage() {
           )}
         </section>
       </main>
+
+      {/* Link a Mis Reservas */}
+      <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+        ¿Ya tenés una reserva?{' '}
+        <Link to="/mis-reservas" className="text-brand-600 hover:underline dark:text-brand-400">
+          Ver mis turnos
+        </Link>
+      </p>
 
       {/* Modal de reserva */}
       <BookingModal

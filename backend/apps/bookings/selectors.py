@@ -39,7 +39,7 @@ from zoneinfo import ZoneInfo
 from django.db.models import Count, Q, Sum
 
 from apps.bookings.models import Booking, CashMovement
-from apps.courts.models import Court, ScheduleBlock
+from apps.courts.models import Court, ScheduleBlock, SlotBlock
 
 BUENOS_AIRES = ZoneInfo("America/Argentina/Buenos_Aires")
 UTC = ZoneInfo("UTC")
@@ -340,10 +340,26 @@ def get_daily_grid(date_str: str) -> dict:
     for booking in bookings_qs:
         bookings_by_court.setdefault(booking["court_id"], []).append(booking)
 
+    # Prefetch SlotBlocks activos del día para todas las canchas (una sola query)
+    # El rango del día en UTC cubre posibles bloqueos que crucen medianoche UTC
+    day_start_utc_sb = datetime(date.year, date.month, date.day, 0, 0, 0, tzinfo=UTC)
+    day_end_utc_sb = day_start_utc_sb + timedelta(days=1)
+    slot_blocks_qs = SlotBlock.objects.filter(
+        court__in=courts,
+        is_active=True,
+        start_dt__lt=day_end_utc_sb,
+        end_dt__gt=day_start_utc_sb,
+    ).values("id", "court_id", "start_dt", "end_dt", "reason")
+
+    slot_blocks_by_court: dict[int, list] = {}
+    for sb in slot_blocks_qs:
+        slot_blocks_by_court.setdefault(sb["court_id"], []).append(sb)
+
     courts_data = []
     for court in courts:
         court_blocks = blocks_by_court.get(court.pk, [])
         court_bookings = bookings_by_court.get(court.pk, [])
+        court_slot_blocks = slot_blocks_by_court.get(court.pk, [])
 
         duration = timedelta(minutes=court.slot_duration_minutes)
         slots = []
@@ -385,16 +401,42 @@ def get_daily_grid(date_str: str) -> dict:
                         "booking_id": overlapping["id"],
                         "guest_name": guest_display,
                         "price": str(overlapping["price"]) if overlapping["price"] is not None else None,
+                        "block_id": None,
+                        "block_reason": None,
                     })
                 else:
-                    slots.append({
-                        "start_dt": start_utc.isoformat(),
-                        "end_dt": end_utc.isoformat(),
-                        "status": "AVAILABLE",
-                        "booking_id": None,
-                        "guest_name": None,
-                        "price": None,
-                    })
+                    # Sin reserva: verificar si hay SlotBlock activo solapado
+                    # El booking gana sobre el SlotBlock si ambos coinciden (ya resuelto arriba)
+                    blocking = next(
+                        (
+                            sb for sb in court_slot_blocks
+                            if sb["start_dt"] < end_utc and sb["end_dt"] > start_utc
+                        ),
+                        None,
+                    )
+
+                    if blocking:
+                        slots.append({
+                            "start_dt": start_utc.isoformat(),
+                            "end_dt": end_utc.isoformat(),
+                            "status": "BLOCKED",
+                            "booking_id": None,
+                            "guest_name": None,
+                            "price": None,
+                            "block_id": blocking["id"],
+                            "block_reason": blocking["reason"],
+                        })
+                    else:
+                        slots.append({
+                            "start_dt": start_utc.isoformat(),
+                            "end_dt": end_utc.isoformat(),
+                            "status": "AVAILABLE",
+                            "booking_id": None,
+                            "guest_name": None,
+                            "price": None,
+                            "block_id": None,
+                            "block_reason": None,
+                        })
 
                 current_ba = end_ba
 

@@ -13,6 +13,7 @@
  *
  * Rutas Sprint 2:
  *   /booking            → BookingPage (grilla publica de turnos — sin auth)
+ *   /mis-reservas       → MyBookingsPage (consulta de reservas del jugador — sin auth)
  *   /admin/bookings     → BookingsAdminPage (panel operator/admin — JWT)
  *   /admin/cashbox      → CashboxPage (caja diaria — JWT)
  *   /admin/grid         → DailyGridPage (grilla multi-cancha — JWT)
@@ -22,8 +23,8 @@
  *
  * Layout:
  *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
- *   AdminLayout (navbar + Outlet). La ruta /booking es pública y tiene
- *   su propio header inline; no usa AdminLayout.
+ *   AdminLayout (navbar + Outlet). Las rutas /booking y /mis-reservas son
+ *   públicas y tienen su propio header inline; no usan AdminLayout.
  */
 
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
@@ -40,6 +41,7 @@ import { DailyGridPage } from '@/features/booking/pages/DailyGridPage'
 import { OperatorsPage } from '@/features/users/pages/OperatorsPage'
 import { ChatDemoPage } from '@/features/agent/ChatDemoPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
+import { MyBookingsPage } from '@/features/myBookings/MyBookingsPage'
 
 const router = createBrowserRouter([
   {
@@ -52,6 +54,11 @@ const router = createBrowserRouter([
     // Tiene su propio header; NO usa AdminLayout.
     path: '/booking',
     element: <BookingPage />,
+  },
+  {
+    // Ruta publica: consulta de reservas por telefono (sin auth)
+    path: '/mis-reservas',
+    element: <MyBookingsPage />,
   },
   {
     // Rutas protegidas (requieren JWT)

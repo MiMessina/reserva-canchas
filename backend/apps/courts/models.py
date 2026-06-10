@@ -18,6 +18,7 @@ Reglas de datos (RULES.md §4, DER.md):
 
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -141,4 +142,60 @@ class ScheduleBlock(TimeStampedSoftDeleteModel):
             f"{self.court.name} — "
             f"{self.get_weekday_display()} "
             f"{self.open_time.strftime('%H:%M')}–{self.close_time.strftime('%H:%M')}"
+        )
+
+
+class SlotBlock(TimeStampedSoftDeleteModel):
+    """
+    Bloqueo manual de un slot por el operador/admin.
+
+    Permite bloquear un intervalo de tiempo en una cancha para
+    torneos, mantenimiento, cierre anticipado, etc. Impide que el
+    jugador reserve ese intervalo. No es una reserva.
+
+    start_dt y end_dt se guardan en UTC (RULES.md §4).
+    Soft-delete via is_active (heredado de TimeStampedSoftDeleteModel).
+    """
+
+    court = models.ForeignKey(
+        Court,
+        on_delete=models.CASCADE,
+        related_name="slot_blocks",
+        verbose_name="Cancha",
+        help_text="Cancha cuyo horario se bloquea.",
+    )
+    start_dt = models.DateTimeField(
+        verbose_name="Inicio del bloqueo (UTC)",
+        help_text="Fecha y hora de inicio del bloqueo en UTC.",
+    )
+    end_dt = models.DateTimeField(
+        verbose_name="Fin del bloqueo (UTC)",
+        help_text="Fecha y hora de fin del bloqueo en UTC.",
+    )
+    reason = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        verbose_name="Motivo",
+        help_text="Motivo del bloqueo (ej: torneo, mantenimiento, cierre anticipado).",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_slot_blocks",
+        verbose_name="Creado por",
+        help_text="Operador o admin que creó el bloqueo.",
+    )
+
+    class Meta:
+        verbose_name = "Bloqueo de slot"
+        verbose_name_plural = "Bloqueos de slots"
+        ordering = ["start_dt"]
+
+    def __str__(self):
+        return (
+            f"Bloqueo {self.court} "
+            f"{self.start_dt:%Y-%m-%d %H:%M} — {self.end_dt:%H:%M}"
         )

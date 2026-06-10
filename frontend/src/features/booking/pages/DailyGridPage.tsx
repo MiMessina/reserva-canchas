@@ -7,22 +7,26 @@
  *  - Selector de fecha (default hoy en hora BA).
  *  - Tabla con scroll horizontal: primera columna "Horario", luego una columna
  *    por cada cancha del complejo.
- *  - Cada celda muestra el estado del slot con color semanfico:
- *      AVAILABLE       → blanco / gris claro "Libre"
+ *  - Cada celda muestra el estado del slot con color semantico:
+ *      AVAILABLE       → blanco / gris claro "Libre" + boton de bloqueo
  *      PENDING_PAYMENT → amarillo / nombre del invitado
  *      CONFIRMED       → azul / nombre del invitado
  *      COMPLETED       → gris / "Jugado"
+ *      BLOCKED         → gris pizarra / motivo o "Bloqueado" + click para desbloquear
  *      CANCELLED       → no deberia aparecer (vuelve a AVAILABLE en el backend)
  *  - Los horarios se convierten de UTC a hora BA usando formatTimeBA (lib/datetime).
  *  - Estados loading / empty / error.
+ *  - Bloquear slots AVAILABLE con BlockSlotModal.
+ *  - Desbloquear slots BLOCKED con BlockSlotModal (modo unblock).
  */
 
 import { useState } from 'react'
-import { TableProperties, CalendarDays } from 'lucide-react'
+import { TableProperties, CalendarDays, Lock } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { BookingDetailModal } from '../BookingDetailModal'
+import { BlockSlotModal } from '../BlockSlotModal'
 import { useDailyGrid } from '../hooks/useBookings'
 import { formatTimeBA, toLocalDateStringBA } from '@/lib/datetime'
 import { extractApiErrorMessage } from '@/lib/apiError'
@@ -38,17 +42,19 @@ function todayLocalDate(): string {
 function slotCellClasses(status: SlotStatus): string {
   switch (status) {
     case 'AVAILABLE':
-      return 'bg-white text-gray-400'
+      return 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500'
     case 'PENDING_PAYMENT':
-      return 'bg-yellow-50 text-yellow-700'
+      return 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
     case 'CONFIRMED':
-      return 'bg-blue-50 text-blue-700'
+      return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
     case 'COMPLETED':
-      return 'bg-gray-100 text-gray-500'
+      return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+    case 'BLOCKED':
+      return 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
     case 'CANCELLED':
-      return 'bg-white text-gray-300 line-through'
+      return 'bg-white dark:bg-gray-800 text-gray-300 dark:text-gray-600 line-through'
     default:
-      return 'bg-white text-gray-400'
+      return 'bg-white dark:bg-gray-800 text-gray-400'
   }
 }
 
@@ -62,6 +68,8 @@ function slotLabel(slot: DailyGridSlot): string {
       return slot.guest_name ?? 'Invitado'
     case 'COMPLETED':
       return slot.guest_name ?? 'Jugado'
+    case 'BLOCKED':
+      return slot.block_reason ?? 'Bloqueado'
     case 'CANCELLED':
       return 'Cancelado'
     default:
@@ -69,11 +77,19 @@ function slotLabel(slot: DailyGridSlot): string {
   }
 }
 
+// ─── Estado para el modal de bloqueo ─────────────────────────────────────────
+
+interface BlockSlotTarget {
+  slot: DailyGridSlot
+  courtId: number
+}
+
 // ─── Pagina principal ─────────────────────────────────────────────────────────
 
 export function DailyGridPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayLocalDate())
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null)
+  const [blockTarget, setBlockTarget] = useState<BlockSlotTarget | null>(null)
 
   const { data, isLoading, isError, error, refetch } = useDailyGrid(selectedDate)
 
@@ -191,42 +207,88 @@ export function DailyGridPage() {
                         return (
                           <td
                             key={court.id}
-                            className="px-3 py-2 text-center text-xs text-gray-300"
+                            className="px-3 py-2 text-center text-xs text-gray-300 dark:text-gray-600"
                           >
                             —
                           </td>
                         )
                       }
 
-                      const isClickable = slot.booking_id !== null
+                      // Slots con reserva asociada: clickeables para ver el detalle
+                      const isBookingClickable = slot.booking_id !== null
+
+                      // Slots bloqueados: clickeables para desbloquear
+                      const isBlocked = slot.status === 'BLOCKED'
+
+                      // Slots libres: muestran boton de bloqueo en la esquina
+                      const isAvailable = slot.status === 'AVAILABLE'
+
+                      const handleCellClick = isBookingClickable
+                        ? () => setSelectedBookingId(slot.booking_id)
+                        : isBlocked
+                          ? () => setBlockTarget({ slot, courtId: court.id })
+                          : undefined
+
+                      const isCellClickable = isBookingClickable || isBlocked
+
                       return (
                         <td
                           key={court.id}
                           className={[
-                            'px-3 py-2 text-center text-xs font-medium rounded-sm transition-colors',
+                            'px-3 py-2 text-center text-xs font-medium rounded-sm transition-colors relative',
                             slotCellClasses(slot.status),
-                            isClickable ? 'cursor-pointer hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-500' : '',
+                            isCellClickable
+                              ? 'cursor-pointer hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-500'
+                              : '',
                           ].join(' ')}
-                          onClick={isClickable ? () => setSelectedBookingId(slot.booking_id) : undefined}
-                          role={isClickable ? 'button' : undefined}
-                          tabIndex={isClickable ? 0 : undefined}
+                          onClick={handleCellClick}
+                          role={isCellClickable ? 'button' : undefined}
+                          tabIndex={isCellClickable ? 0 : undefined}
                           onKeyDown={
-                            isClickable
+                            isCellClickable
                               ? (e) => {
                                   if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault()
-                                    setSelectedBookingId(slot.booking_id)
+                                    handleCellClick?.()
                                   }
                                 }
                               : undefined
                           }
                           aria-label={
-                            isClickable
+                            isBookingClickable
                               ? `Ver detalle de reserva de ${slot.guest_name ?? 'invitado'} a las ${formatTimeBA(slot.start_dt)}`
-                              : undefined
+                              : isBlocked
+                                ? `Desbloquear turno de las ${formatTimeBA(slot.start_dt)}${slot.block_reason ? ` (${slot.block_reason})` : ''}`
+                                : undefined
                           }
                         >
-                          {slotLabel(slot)}
+                          {/* Contenido principal del slot */}
+                          {isBlocked ? (
+                            <span className="flex items-center justify-center gap-1">
+                              <Lock size={11} aria-hidden="true" className="shrink-0" />
+                              <span className="truncate max-w-[80px]">
+                                {slotLabel(slot)}
+                              </span>
+                            </span>
+                          ) : (
+                            <span>{slotLabel(slot)}</span>
+                          )}
+
+                          {/* Boton de bloqueo para slots libres (esquina superior derecha) */}
+                          {isAvailable && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setBlockTarget({ slot, courtId: court.id })
+                              }}
+                              title="Bloquear este turno"
+                              aria-label={`Bloquear turno de las ${formatTimeBA(slot.start_dt)} en ${court.name}`}
+                              className="absolute top-0.5 right-0.5 p-0.5 rounded text-gray-300 dark:text-gray-600 hover:text-slate-600 dark:hover:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-1 focus:ring-brand-500"
+                            >
+                              <Lock size={10} aria-hidden="true" />
+                            </button>
+                          )}
                         </td>
                       )
                     })}
@@ -242,6 +304,15 @@ export function DailyGridPage() {
       <BookingDetailModal
         bookingId={selectedBookingId}
         onClose={() => setSelectedBookingId(null)}
+      />
+
+      {/* Modal de bloqueo / desbloqueo */}
+      <BlockSlotModal
+        slot={blockTarget?.slot ?? null}
+        courtId={blockTarget?.courtId ?? null}
+        selectedDate={selectedDate}
+        onClose={() => setBlockTarget(null)}
+        onSuccess={() => setBlockTarget(null)}
       />
     </div>
   )
