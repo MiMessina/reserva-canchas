@@ -64,6 +64,9 @@ urlpatterns = [
     # Bookings (motor de reservas) y CashMovements — Sprint 2
     path("api/", include("apps.bookings.urls")),
 
+    # CashSessions (apertura/cierre de caja diaria) — Sprint 3
+    path("api/", include("apps.cashbox.urls")),
+
     # Agente IA conversacional (ADR-012) — Sprint 3
     path("api/", include("apps.agent.urls")),
 
