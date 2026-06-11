@@ -20,6 +20,7 @@
  *   /admin/operators    → OperatorsPage (gestion de operadores — tenant_admin)
  *   /admin/agent        → ChatDemoPage (chat demo con agente IA — JWT)
  *   /admin/reports      → ReportsPage (reportes semanales — operator/admin)
+ *   /admin/settings     → SettingsPage (configuracion del complejo — tenant_admin)
  *
  * Layout:
  *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
@@ -42,6 +43,7 @@ import { OperatorsPage } from '@/features/users/pages/OperatorsPage'
 import { ChatDemoPage } from '@/features/agent/ChatDemoPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { MyBookingsPage } from '@/features/myBookings/MyBookingsPage'
+import { SettingsPage } from '@/features/settings/SettingsPage'
 
 const router = createBrowserRouter([
   {
@@ -103,6 +105,10 @@ const router = createBrowserRouter([
           {
             path: '/admin/reports',
             element: <ReportsPage />,
+          },
+          {
+            path: '/admin/settings',
+            element: <SettingsPage />,
           },
         ],
       },

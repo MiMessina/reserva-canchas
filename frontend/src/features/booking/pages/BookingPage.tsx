@@ -20,7 +20,8 @@ import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { CalendarDays, Clock, MapPin, CheckCircle2 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { CalendarDays, Clock, MapPin, CheckCircle2, CreditCard, Phone } from 'lucide-react'
 import { Spinner } from '@/components/Spinner'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
@@ -30,7 +31,13 @@ import { useCourts } from '@/features/courts/hooks/useCourts'
 import { useAvailability, useCreateBooking } from '../hooks/useBookings'
 import { formatTimeBA, toLocalDateStringBA } from '@/lib/datetime'
 import { extractApiErrorMessage } from '@/lib/apiError'
+import { getComplexSettings } from '@/services/settings'
+import type { ComplexSettings } from '@/types/settings'
 import type { Slot } from '../types'
+
+// ─── Query key de settings (sincronizada con SettingsPage) ────────────────────
+
+const SETTINGS_QUERY_KEY = ['settings'] as const
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -116,6 +123,82 @@ function SlotRow({ slot, price, onReserve }: SlotRowProps) {
   )
 }
 
+// ─── Bloque de instrucciones de pago (post-reserva) ──────────────────────────
+
+interface PaymentInstructionsProps {
+  settings: ComplexSettings | undefined
+}
+
+function PaymentInstructions({ settings }: PaymentInstructionsProps) {
+  const hasPaymentData =
+    settings &&
+    (settings.cbu_number || settings.cbu_alias || settings.account_holder || settings.payment_instructions)
+
+  const hasContactData = settings && (settings.whatsapp || settings.phone)
+
+  if (!hasPaymentData && !hasContactData) {
+    return (
+      <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+        Contacta al complejo para confirmar el pago de la seña.
+      </p>
+    )
+  }
+
+  return (
+    <div className="w-full space-y-3 text-left">
+      {/* Datos de pago */}
+      {hasPaymentData && (
+        <div className="rounded-xl bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-800 px-4 py-3 space-y-2">
+          <div className="flex items-center gap-2 text-brand-700 dark:text-brand-400">
+            <CreditCard size={15} aria-hidden="true" />
+            <span className="text-sm font-semibold">Datos para la seña</span>
+          </div>
+          {settings.account_holder && (
+            <p className="text-xs text-gray-700 dark:text-gray-300">
+              <span className="font-medium">Titular:</span> {settings.account_holder}
+            </p>
+          )}
+          {settings.cbu_number && (
+            <p className="text-xs text-gray-700 dark:text-gray-300 break-all">
+              <span className="font-medium">CBU:</span> {settings.cbu_number}
+            </p>
+          )}
+          {settings.cbu_alias && (
+            <p className="text-xs text-gray-700 dark:text-gray-300">
+              <span className="font-medium">Alias:</span> {settings.cbu_alias}
+            </p>
+          )}
+          {settings.payment_instructions && (
+            <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+              {settings.payment_instructions}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Contacto */}
+      {hasContactData && (
+        <div className="rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-4 py-3 space-y-1.5">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+            <Phone size={14} aria-hidden="true" />
+            <span className="text-xs font-semibold">Consultas</span>
+          </div>
+          {settings.whatsapp && (
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              <span className="font-medium">WhatsApp:</span> {settings.whatsapp}
+            </p>
+          )}
+          {settings.phone && !settings.whatsapp && (
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              <span className="font-medium">Tel:</span> {settings.phone}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Modal de formulario de reserva ──────────────────────────────────────────
 
 interface BookingModalProps {
@@ -125,6 +208,7 @@ interface BookingModalProps {
   courtId: number
   courtName: string
   price: string
+  settings: ComplexSettings | undefined
 }
 
 interface BookingSuccess {
@@ -139,6 +223,7 @@ function BookingModal({
   courtId,
   courtName,
   price,
+  settings,
 }: BookingModalProps) {
   const [successData, setSuccessData] = useState<BookingSuccess | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
@@ -191,17 +276,20 @@ function BookingModal({
         <div className="flex flex-col items-center py-4 text-center gap-4">
           <CheckCircle2 size={48} className="text-green-500" aria-hidden="true" />
           <div className="space-y-1">
-            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Reserva confirmada</p>
+            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              Reserva creada
+            </p>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Turno: {courtName} · {successData.timeRange}
+              {courtName} · {successData.timeRange}
             </p>
             <p className="text-sm font-medium text-brand-700">
-              Número de reserva: #{successData.bookingId}
+              Numero de reserva: #{successData.bookingId}
             </p>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-            Presentate en recepcion para confirmar la seña.
+          <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+            Para confirmar tu turno, transferi la seña:
           </p>
+          <PaymentInstructions settings={settings} />
           <Button variant="primary" onClick={handleClose} fullWidth>
             Cerrar
           </Button>
@@ -351,6 +439,14 @@ export function BookingPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayLocalDate())
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+
+  // Cargar settings del complejo para mostrar instrucciones de pago post-reserva.
+  // staleTime alto porque estos datos cambian poco; no bloquea la UI si falla.
+  const { data: complexSettings } = useQuery({
+    queryKey: SETTINGS_QUERY_KEY,
+    queryFn: getComplexSettings,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const { data: courtsData, isLoading: courtsLoading } = useCourts({
     is_active: true,
@@ -518,6 +614,7 @@ export function BookingPage() {
         courtId={effectiveCourtId}
         courtName={selectedCourt?.name ?? ''}
         price={selectedCourt?.base_price ?? '0'}
+        settings={complexSettings}
       />
     </div>
   )

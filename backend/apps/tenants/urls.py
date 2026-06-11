@@ -1,11 +1,20 @@
 """
 URLs de la app tenants.
 
-Sprint 0: solo el healthcheck (registrado en config/urls.py directamente).
-En Sprint 1+ se agregarán endpoints de gestión si el panel de system_admin
-se construye (ver ADR-009).
+Endpoints registrados:
+  GET  /api/settings/   — configuración pública del complejo (AllowAny)
+  PATCH /api/settings/  — actualizar configuración (solo tenant_admin)
+
+El healthcheck se registra directamente en config/urls.py porque es
+un endpoint de infraestructura (no de negocio de tenants).
+
+ADR-009: alta de tenant por management command, sin panel web en MVP.
 """
 
 from django.urls import path
 
-urlpatterns = []
+from apps.tenants.views import ComplexSettingsView
+
+urlpatterns = [
+    path("settings/", ComplexSettingsView.as_view(), name="complex-settings"),
+]

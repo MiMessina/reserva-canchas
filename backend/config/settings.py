@@ -81,6 +81,11 @@ TENANT_APPS = [
     # Utilidades comunes (ADR-011): modelo base abstracto TimeStampedSoftDeleteModel.
     # No genera tablas propias (solo modelos abstractos).
     "apps.common",
+    # apps.tenants también en TENANT_APPS para que ComplexSettings (configuración
+    # pública/operativa del complejo) viva en el esquema de cada tenant.
+    # Tenant y Domain (SHARED_APPS) ya están en public; las nuevas migraciones de
+    # ComplexSettings se aplican a cada esquema de tenant vía migrate_schemas.
+    "apps.tenants",
     # Dominio de negocio por tenant
     "apps.users",    # Custom User (ADR-007: por tenant, no compartido)
     "apps.courts",   # ABM canchas + ScheduleBlock (Sprint 1)

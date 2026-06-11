@@ -11,6 +11,10 @@ Endpoints de Sprint 0:
 FIX R-08: /api/auth/login/ usa EmailTokenObtainPairView (email como identificador,
 no username). Contrato: POST {"email": "...", "password": "..."} → {access, refresh}.
 
+Endpoints de configuración del complejo:
+  GET  /api/settings/   — configuración pública del complejo (AllowAny, acotada al tenant)
+  PATCH /api/settings/  — actualizar configuración (solo tenant_admin)
+
 Endpoints de negocio — Sprint 1:
   /api/courts/             — ABM canchas (GET list, POST create)
   /api/courts/{id}/        — GET retrieve, PATCH partial_update, DELETE (soft-delete)
@@ -54,6 +58,9 @@ urlpatterns = [
     # EmailTokenObtainPairView acepta {"email", "password"} → {access, refresh}
     path("api/auth/login/", EmailTokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+
+    # Configuración del complejo (ComplexSettings) — singleton por tenant
+    path("api/", include("apps.tenants.urls")),
 
     # Users (gestión de operadores, perfil propio) — Sprint 1+
     path("api/", include("apps.users.urls")),

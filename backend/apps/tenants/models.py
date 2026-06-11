@@ -1,18 +1,25 @@
 """
-Modelos del esquema `public` (compartido entre todos los tenants).
+Modelos de la app tenants.
 
 ADR-001: Multi-tenant por esquema PostgreSQL con django-tenants.
 ADR-009: Alta de tenant por management command.
 
+Modelos y sus esquemas:
+- Tenant y Domain (SHARED_APPS): viven en el esquema `public`.
+- ComplexSettings (TENANT_APPS): vive en el esquema de cada tenant.
+  Contiene la configuración pública/operativa del complejo (nombre visible,
+  datos de pago, contacto). El aislamiento por esquema garantiza una instancia
+  por tenant sin necesidad de unique_together.
+
 Reglas:
-- Tenant y Domain viven SOLO en el esquema public.
-- Toda entidad de negocio (User, Court, Booking, etc.) vive en el esquema
-  del tenant correspondiente, NUNCA aquí.
 - Soft-delete con is_active; prohibido DELETE físico.
+- Fechas/horas en UTC (USE_TZ=True).
 """
 
 from django.db import models
 from django_tenants.models import DomainMixin, TenantMixin
+
+from apps.common.models import TimeStampedSoftDeleteModel
 
 
 class Tenant(TenantMixin):
@@ -66,3 +73,83 @@ class Domain(DomainMixin):
 
     def __str__(self):
         return self.domain
+
+
+class ComplexSettings(TimeStampedSoftDeleteModel):
+    """
+    Configuración pública y operativa del complejo deportivo.
+
+    Vive en el esquema de CADA tenant (no en public). Contiene la información
+    que el jugador puede ver (nombre del complejo, instrucciones de pago,
+    contacto) y que el operador configura desde el panel de administración.
+
+    El aislamiento por esquema garantiza una única instancia por tenant:
+    no se usa unique_together porque cada esquema PostgreSQL es independiente.
+
+    Uso típico:
+        settings = ComplexSettings.objects.get_or_create(defaults={'complex_name': ''})[0]
+    """
+
+    complex_name = models.CharField(
+        max_length=200,
+        verbose_name="Nombre público del complejo",
+        help_text="Nombre que verá el jugador en la grilla y en las notificaciones.",
+    )
+    payment_instructions = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Instrucciones de pago",
+        help_text=(
+            "Texto libre con indicaciones para que el jugador pague la seña "
+            "(ej: 'Transferí al CBU indicado y enviá el comprobante por WhatsApp')."
+        ),
+    )
+    cbu_alias = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Alias CBU/CVU",
+        help_text="Alias de la cuenta bancaria o billetera virtual del complejo.",
+    )
+    cbu_number = models.CharField(
+        max_length=22,
+        blank=True,
+        default="",
+        verbose_name="Número de CBU/CVU",
+        help_text="CBU o CVU de 22 dígitos para transferencias bancarias.",
+    )
+    account_holder = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        verbose_name="Titular de la cuenta",
+        help_text="Nombre del titular de la cuenta bancaria o billetera.",
+    )
+    phone = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        verbose_name="Teléfono de contacto",
+        help_text="Número de teléfono del complejo (ej: +5491112345678).",
+    )
+    instagram = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Instagram",
+        help_text="Usuario de Instagram sin el @. Ej: 'complejolospinos'.",
+    )
+    whatsapp = models.CharField(
+        max_length=30,
+        blank=True,
+        default="",
+        verbose_name="WhatsApp",
+        help_text="Número de WhatsApp en formato internacional (ej: +5491112345678).",
+    )
+
+    class Meta:
+        verbose_name = "Configuración del complejo"
+        verbose_name_plural = "Configuraciones del complejo"
+
+    def __str__(self):
+        return f"Configuración: {self.complex_name or '(sin nombre)'}"
