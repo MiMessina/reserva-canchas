@@ -43,16 +43,18 @@ function todayLabelBA(): string {
 interface StatCardProps {
   label: string
   value: number | string | undefined
-  colorClasses: string   // bg + text combinados como string de clases Tailwind
+  cardClass: string
+  labelClass: string
+  valueClass: string
 }
 
-function StatCard({ label, value, colorClasses }: StatCardProps) {
+function StatCard({ label, value, cardClass, labelClass, valueClass }: StatCardProps) {
   return (
-    <div className={`rounded-xl p-4 ${colorClasses}`}>
-      <p className="text-xs font-semibold uppercase tracking-wide opacity-70 mb-1">
+    <div className={`rounded-xl p-4 border transition-colors ${cardClass}`}>
+      <p className={`text-xs font-semibold uppercase tracking-wide mb-2 ${labelClass}`}>
         {label}
       </p>
-      <p className="text-3xl font-bold leading-none">
+      <p className={`text-3xl font-bold leading-none ${valueClass}`}>
         {value ?? '—'}
       </p>
     </div>
@@ -137,22 +139,30 @@ export function DashboardPage() {
           <StatCard
             label="Pendiente de seña"
             value={bt?.pending_payment}
-            colorClasses="bg-yellow-50 text-yellow-700"
+            cardClass="bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20"
+            labelClass="text-amber-500 dark:text-amber-400"
+            valueClass="text-amber-600 dark:text-amber-300"
           />
           <StatCard
             label="Confirmadas"
             value={bt?.confirmed}
-            colorClasses="bg-green-50 text-green-700"
+            cardClass="bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
+            labelClass="text-emerald-600 dark:text-emerald-400"
+            valueClass="text-emerald-700 dark:text-emerald-300"
           />
           <StatCard
             label="Completadas"
             value={bt?.completed}
-            colorClasses="bg-gray-100 text-gray-600"
+            cardClass="bg-slate-500/10 border-slate-500/25 hover:bg-slate-500/20"
+            labelClass="text-slate-500 dark:text-slate-400"
+            valueClass="text-slate-600 dark:text-slate-300"
           />
           <StatCard
             label="Canceladas"
             value={bt?.cancelled}
-            colorClasses="bg-red-50 text-red-700"
+            cardClass="bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/20"
+            labelClass="text-rose-500 dark:text-rose-400"
+            valueClass="text-rose-600 dark:text-rose-300"
           />
         </div>
       </section>
@@ -212,12 +222,14 @@ export function DashboardPage() {
             </div>
             <p
               className={`text-3xl font-bold ${
-                cashTotalNegative ? 'text-red-600' : 'text-gray-900'
+                cashTotalNegative
+                  ? 'text-red-500 dark:text-red-400'
+                  : 'text-gray-900 dark:text-gray-100'
               }`}
             >
               {formatARS(cashTotal)}
             </p>
-            <p className="text-sm text-green-700 font-medium">
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
               Ingresos: {formatARS(cashIngresos)}
             </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
