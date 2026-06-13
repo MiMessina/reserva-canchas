@@ -103,7 +103,7 @@ function desktopLinkClasses({ isActive }: { isActive: boolean }) {
 /** Clases del tab activo para la bottom bar de mobile */
 function mobileLinkClasses({ isActive }: { isActive: boolean }) {
   return [
-    'flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[48px]',
+    'flex flex-col items-center justify-center gap-0.5 shrink-0 min-w-[60px] py-2 min-h-[48px] px-1',
     'text-xs font-medium transition-colors',
     'focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500',
     isActive
@@ -187,7 +187,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
 
       {/* ── BOTTOM TAB BAR (mobile, oculta en md+) ──────────────────────── */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 dark:bg-gray-900 dark:border-gray-700 flex"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 dark:bg-gray-900 dark:border-gray-700 flex overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         aria-label="Navegacion principal"
       >
         {visibleItems.map((item) => (
@@ -203,7 +203,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
           onClick={onLogout}
           aria-label="Cerrar sesion"
           className={[
-            'flex flex-col items-center justify-center gap-0.5 flex-1 py-2 min-h-[48px]',
+            'flex flex-col items-center justify-center gap-0.5 shrink-0 min-w-[60px] py-2 min-h-[48px] px-1',
             'text-xs font-medium text-gray-500 hover:text-red-600 transition-colors',
             'focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-400',
           ].join(' ')}

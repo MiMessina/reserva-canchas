@@ -1,11 +1,11 @@
 """
-services.py — AgentService: orquesta el bucle de tool use con Claude API (ADR-012).
+services.py — AgentService: orquesta el bucle de function calling con Gemini API (ADR-012).
 
-Flujo:
+Usa el SDK google-genai (v1 estable). Flujo:
   1. Recibir historial de mensajes del frontend (stateless).
-  2. Llamar a Claude con los TOOL_DEFINITIONS.
-  3. Si Claude usa una tool → ejecutarla con execute_tool() → agregar resultado → repetir.
-  4. Cuando Claude responde en texto → devolver reply + historial actualizado.
+  2. Llamar a Gemini con las TOOL_DEFINITIONS.
+  3. Si Gemini llama una function → ejecutarla → devolver resultado → repetir.
+  4. Cuando Gemini responde en texto → devolver reply + historial actualizado.
 
 Sin modelos ni migraciones: el estado de la conversación vive en el frontend.
 """
@@ -34,90 +34,109 @@ Reglas importantes:
 - Las señas se pagan por transferencia bancaria; el cajero confirma la reserva al recibir el pago.
 - No hablés de temas fuera del complejo deportivo."""
 
-MODEL = "claude-haiku-4-5-20251001"
-MAX_TOKENS = 1024
+MODEL = "gemini-2.0-flash"
 MAX_TOOL_ITERATIONS = 5
 
 
 def run_agent(messages: list[dict]) -> tuple[str, list[dict]]:
     """
-    Ejecuta el bucle de tool use del agente.
+    Ejecuta el bucle de function calling del agente con Gemini (google-genai SDK).
 
     Parámetros:
-      messages — historial completo en formato Claude API:
-                 [{"role": "user"|"assistant", "content": str | list}, ...]
+      messages — historial: [{"role": "user"|"assistant", "content": str}, ...]
+                 El último elemento debe ser el mensaje nuevo del usuario.
 
     Retorna:
-      (reply, updated_messages) donde:
-        reply            — texto final del asistente para mostrar en el chat.
-        updated_messages — historial actualizado (incluyendo tool calls/results y la respuesta).
+      (reply, updated_messages) donde updated_messages incluye la respuesta appended.
 
     Lanza:
-      RuntimeError si ANTHROPIC_API_KEY no está configurada.
-      RuntimeError si Claude no converge después de MAX_TOOL_ITERATIONS.
+      RuntimeError si GEMINI_API_KEY no está configurada.
+      RuntimeError si el agente no converge después de MAX_TOOL_ITERATIONS.
     """
-    if not settings.ANTHROPIC_API_KEY:
+    if not settings.GEMINI_API_KEY:
         raise RuntimeError(
-            "ANTHROPIC_API_KEY no está configurada. "
+            "GEMINI_API_KEY no está configurada. "
             "Agregá la variable de entorno en el archivo .env y reiniciá el servidor."
         )
 
     try:
-        import anthropic
+        from google import genai
+        from google.genai import types
     except ImportError:
         raise RuntimeError(
-            "La librería 'anthropic' no está instalada. "
-            "Agregá 'anthropic>=0.40,<1.0' a requirements.txt y reconstruí el contenedor."
+            "La librería 'google-genai' no está instalada. "
+            "Agregá 'google-genai>=1.0.0' a requirements.txt y reconstruí el contenedor."
         )
 
-    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-    current_messages = list(messages)
+    # Construir lista de Contents para Gemini desde el historial
+    # Gemini usa "model" (no "assistant") y types.Content/Part
+    contents = []
+    for msg in messages:
+        content_text = msg.get("content", "")
+        if not isinstance(content_text, str):
+            continue
+        role = "model" if msg["role"] == "assistant" else "user"
+        contents.append(
+            types.Content(role=role, parts=[types.Part(text=content_text)])
+        )
+
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        tools=[TOOL_DEFINITIONS],
+    )
+
     iterations = 0
-
     while iterations < MAX_TOOL_ITERATIONS:
         iterations += 1
-        response = client.messages.create(
+
+        response = client.models.generate_content(
             model=MODEL,
-            max_tokens=MAX_TOKENS,
-            system=SYSTEM_PROMPT,
-            messages=current_messages,
-            tools=TOOL_DEFINITIONS,
+            contents=contents,
+            config=config,
         )
 
-        if response.stop_reason == "end_turn":
-            # Claude respondió con texto; extraer y retornar
-            reply = next(
-                (block.text for block in response.content if hasattr(block, "text")),
-                "",
-            )
-            current_messages.append({"role": "assistant", "content": response.content})
-            return reply, current_messages
+        candidate = response.candidates[0]
 
-        if response.stop_reason == "tool_use":
-            # Procesar todas las tool calls de esta respuesta
-            tool_results = []
-            for block in response.content:
-                if block.type == "tool_use":
-                    logger.info("Tool call: %s(%s)", block.name, block.input)
-                    result_text = execute_tool(block.name, block.input)
-                    logger.info("Tool result: %s", result_text[:200])
-                    tool_results.append(
-                        {
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": result_text,
-                        }
+        # Detectar function calls
+        function_calls = [
+            part.function_call
+            for part in candidate.content.parts
+            if part.function_call and part.function_call.name
+        ]
+
+        if function_calls:
+            # Agregar el turno del modelo con las function calls al historial
+            contents.append(candidate.content)
+
+            # Ejecutar cada function call y construir la respuesta
+            function_response_parts = []
+            for fc in function_calls:
+                logger.info("Function call: %s(%s)", fc.name, dict(fc.args))
+                result_text = execute_tool(fc.name, dict(fc.args))
+                logger.info("Function result: %s", result_text[:200])
+                function_response_parts.append(
+                    types.Part(
+                        function_response=types.FunctionResponse(
+                            name=fc.name,
+                            response={"result": result_text},
+                        )
                     )
+                )
 
-            # Agregar turno de asistente (con tool_use) y turno de usuario (con tool_results)
-            current_messages.append({"role": "assistant", "content": response.content})
-            current_messages.append({"role": "user", "content": tool_results})
+            # Agregar las respuestas como turno de usuario
+            contents.append(
+                types.Content(role="user", parts=function_response_parts)
+            )
             continue
 
-        # stop_reason inesperado
-        logger.warning("stop_reason inesperado: %s", response.stop_reason)
-        break
+        # Respuesta de texto final
+        reply = candidate.content.parts[0].text if candidate.content.parts else ""
+
+        # Historial actualizado: solo strings (el último assistant se agrega)
+        updated_messages = list(messages) + [{"role": "assistant", "content": reply}]
+        return reply, updated_messages
 
     raise RuntimeError(
         f"El agente no convergió después de {MAX_TOOL_ITERATIONS} iteraciones."

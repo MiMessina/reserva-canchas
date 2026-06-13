@@ -47,7 +47,7 @@ class ChatView(APIView):
             reply, updated_messages = run_agent(messages)
         except RuntimeError as exc:
             msg = str(exc)
-            if "ANTHROPIC_API_KEY" in msg or "anthropic" in msg.lower():
+            if "GEMINI_API_KEY" in msg or "gemini" in msg.lower():
                 logger.error("Agente no configurado: %s", msg)
                 return Response(
                     {
@@ -65,7 +65,7 @@ class ChatView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-        # Convertir content de bloques Anthropic a formato serializable para JSON
+        # Serializar el historial (solo strings desde la migración a Gemini)
         serializable_messages = _make_serializable(updated_messages)
 
         return Response(
@@ -77,25 +77,11 @@ class ChatView(APIView):
 
 
 def _make_serializable(messages: list) -> list:
-    """
-    Convierte los objetos ContentBlock de Anthropic (no serializables por JSON)
-    a dicts simples para poder incluirlos en la Response.
-    """
+    """Pasa el historial tal como viene (solo strings desde la migración a Gemini)."""
     result = []
     for msg in messages:
-        content = msg["content"]
-        if isinstance(content, str):
-            result.append({"role": msg["role"], "content": content})
-        elif isinstance(content, list):
-            serialized_content = []
-            for block in content:
-                if hasattr(block, "model_dump"):
-                    serialized_content.append(block.model_dump())
-                elif isinstance(block, dict):
-                    serialized_content.append(block)
-                else:
-                    serialized_content.append({"type": "unknown", "text": str(block)})
-            result.append({"role": msg["role"], "content": serialized_content})
-        else:
-            result.append({"role": msg["role"], "content": str(content)})
+        content = msg.get("content", "")
+        if not isinstance(content, str):
+            content = str(content)
+        result.append({"role": msg["role"], "content": content})
     return result

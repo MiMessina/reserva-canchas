@@ -320,11 +320,12 @@ DEFAULT_FROM_EMAIL = os.environ.get(
 )
 
 # ---------------------------------------------------------------------------
-# Anthropic / Claude API (ADR-012: agente IA conversacional)
-# ANTHROPIC_API_KEY es obligatoria para el endpoint /api/agent/chat/.
+# Gemini API (ADR-012: agente IA conversacional)
+# GEMINI_API_KEY es obligatoria para el endpoint /api/agent/chat/.
+# Obtené tu clave gratis en https://aistudio.google.com/
 # Si no está configurada, el endpoint devuelve 503 en lugar de crashear.
 # ---------------------------------------------------------------------------
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ---------------------------------------------------------------------------
 # Logging básico

@@ -1,8 +1,8 @@
 """
 tools.py — Definiciones y ejecutores de tools para el agente IA (ADR-012).
 
-Las definiciones se pasan al Claude API (input_schema).
-Los ejecutores llaman directamente a services.py y selectors.py.
+Las definiciones se pasan a la Gemini API (google-genai SDK, function declarations).
+Los ejecutores llaman directamente a services.py y selectors.py del dominio.
 
 Tools disponibles:
   get_availability   — slots libres de una o todas las canchas en una fecha
@@ -15,6 +15,7 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from google.genai import types
 from rest_framework.exceptions import ValidationError
 
 from apps.bookings.models import Booking
@@ -28,116 +29,117 @@ logger = logging.getLogger(__name__)
 BUENOS_AIRES = ZoneInfo("America/Argentina/Buenos_Aires")
 
 # ---------------------------------------------------------------------------
-# Definiciones de tools para Claude API
+# Definiciones de tools para Gemini API (google-genai SDK)
 # ---------------------------------------------------------------------------
 
-TOOL_DEFINITIONS = [
-    {
-        "name": "get_availability",
-        "description": (
-            "Consulta los turnos disponibles de una o todas las canchas para una fecha dada. "
-            "Usá esta tool cuando el jugador pregunta por disponibilidad, horarios libres o quiere saber qué canchas tiene disponibles."
+TOOL_DEFINITIONS = types.Tool(
+    function_declarations=[
+        types.FunctionDeclaration(
+            name="get_availability",
+            description=(
+                "Consulta los turnos disponibles de una o todas las canchas para una fecha dada. "
+                "Usá esta tool cuando el jugador pregunta por disponibilidad, horarios libres o quiere saber qué canchas tiene disponibles."
+            ),
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "date": types.Schema(
+                        type=types.Type.STRING,
+                        description="Fecha en formato YYYY-MM-DD (hora de Buenos Aires).",
+                    ),
+                    "court_id": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="ID de una cancha específica. Omitir para consultar todas las canchas activas.",
+                    ),
+                },
+                required=["date"],
+            ),
         ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "date": {
-                    "type": "string",
-                    "description": "Fecha en formato YYYY-MM-DD (hora de Buenos Aires).",
+        types.FunctionDeclaration(
+            name="create_booking",
+            description=(
+                "Crea una reserva para el jugador. "
+                "La reserva queda en estado PENDING_PAYMENT. "
+                "Usá esta tool cuando el jugador confirmó cancha, fecha, hora y sus datos."
+            ),
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "court_id": types.Schema(
+                        type=types.Type.INTEGER,
+                        description="ID de la cancha a reservar.",
+                    ),
+                    "date": types.Schema(
+                        type=types.Type.STRING,
+                        description="Fecha en formato YYYY-MM-DD (hora de Buenos Aires).",
+                    ),
+                    "time": types.Schema(
+                        type=types.Type.STRING,
+                        description="Hora de inicio en formato HH:MM, 24hs (hora de Buenos Aires). Ejemplo: '20:00'.",
+                    ),
+                    "guest_name": types.Schema(
+                        type=types.Type.STRING,
+                        description="Nombre completo del jugador.",
+                    ),
+                    "guest_phone": types.Schema(
+                        type=types.Type.STRING,
+                        description="Teléfono del jugador (número de WhatsApp).",
+                    ),
                 },
-                "court_id": {
-                    "type": "integer",
-                    "description": "ID de una cancha específica. Omitir para consultar todas las canchas activas.",
-                },
-            },
-            "required": ["date"],
-        },
-    },
-    {
-        "name": "create_booking",
-        "description": (
-            "Crea una reserva para el jugador. "
-            "La reserva queda en estado PENDING_PAYMENT. "
-            "Usá esta tool cuando el jugador confirmó cancha, fecha, hora y sus datos."
+                required=["court_id", "date", "time", "guest_name", "guest_phone"],
+            ),
         ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "court_id": {
-                    "type": "integer",
-                    "description": "ID de la cancha a reservar.",
+        types.FunctionDeclaration(
+            name="cancel_booking",
+            description=(
+                "Cancela la reserva activa (PENDING_PAYMENT o CONFIRMED) del jugador identificado por su teléfono. "
+                "Usá esta tool cuando el jugador quiere cancelar su reserva."
+            ),
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "guest_phone": types.Schema(
+                        type=types.Type.STRING,
+                        description="Teléfono del jugador (el mismo que usó al reservar).",
+                    ),
+                    "reason": types.Schema(
+                        type=types.Type.STRING,
+                        description="Motivo de cancelación (opcional, puede ser vacío).",
+                    ),
                 },
-                "date": {
-                    "type": "string",
-                    "description": "Fecha en formato YYYY-MM-DD (hora de Buenos Aires).",
-                },
-                "time": {
-                    "type": "string",
-                    "description": "Hora de inicio en formato HH:MM, 24hs (hora de Buenos Aires). Ejemplo: '20:00'.",
-                },
-                "guest_name": {
-                    "type": "string",
-                    "description": "Nombre completo del jugador.",
-                },
-                "guest_phone": {
-                    "type": "string",
-                    "description": "Teléfono del jugador (número de WhatsApp).",
-                },
-            },
-            "required": ["court_id", "date", "time", "guest_name", "guest_phone"],
-        },
-    },
-    {
-        "name": "cancel_booking",
-        "description": (
-            "Cancela la reserva activa (PENDING_PAYMENT o CONFIRMED) del jugador identificado por su teléfono. "
-            "Usá esta tool cuando el jugador quiere cancelar su reserva."
+                required=["guest_phone"],
+            ),
         ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "guest_phone": {
-                    "type": "string",
-                    "description": "Teléfono del jugador (el mismo que usó al reservar).",
+        types.FunctionDeclaration(
+            name="get_my_booking",
+            description=(
+                "Consulta la reserva activa del jugador identificado por su teléfono. "
+                "Usá esta tool cuando el jugador pregunta por el estado de su reserva, su turno, o quiere saber si tiene algo reservado."
+            ),
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "guest_phone": types.Schema(
+                        type=types.Type.STRING,
+                        description="Teléfono del jugador.",
+                    ),
                 },
-                "reason": {
-                    "type": "string",
-                    "description": "Motivo de cancelación (opcional, puede ser vacío).",
-                },
-            },
-            "required": ["guest_phone"],
-        },
-    },
-    {
-        "name": "get_my_booking",
-        "description": (
-            "Consulta la reserva activa del jugador identificado por su teléfono. "
-            "Usá esta tool cuando el jugador pregunta por el estado de su reserva, su turno, o quiere saber si tiene algo reservado."
+                required=["guest_phone"],
+            ),
         ),
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "guest_phone": {
-                    "type": "string",
-                    "description": "Teléfono del jugador.",
-                },
-            },
-            "required": ["guest_phone"],
-        },
-    },
-]
+    ]
+)
 
 
 # ---------------------------------------------------------------------------
-# Ejecutores de tools
+# Ejecutores de tools  (NO MODIFICAR — llaman al service layer del dominio)
 # ---------------------------------------------------------------------------
 
 def execute_tool(tool_name: str, tool_input: dict) -> str:
     """
     Despacha la llamada al ejecutor correspondiente y retorna
-    el resultado como string (se pasa como tool_result a Claude).
-    Los errores se capturan y se devuelven como texto descriptivo
-    para que Claude los entienda y comunique al usuario.
+    el resultado como string (se pasa como FunctionResponse a Gemini).
+    Los errores se capturan y se devuelven como texto descriptivo.
     """
     executors = {
         "get_availability": _execute_get_availability,
@@ -151,7 +153,6 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
     try:
         return executor(tool_input)
     except ValidationError as exc:
-        # Errores de negocio del service layer (SLOT_ALREADY_BOOKED, etc.)
         detail = exc.detail
         if isinstance(detail, dict) and "error" in detail:
             err = detail["error"]
@@ -199,7 +200,6 @@ def _execute_create_booking(inp: dict) -> str:
     guest_name: str = inp["guest_name"]
     guest_phone: str = inp["guest_phone"]
 
-    # Parsear fecha + hora en BA y convertir a UTC timezone-aware
     hour, minute = map(int, time_str.split(":"))
     year, month, day = map(int, date_str.split("-"))
     start_dt_ba = datetime(year, month, day, hour, minute, tzinfo=BUENOS_AIRES)
