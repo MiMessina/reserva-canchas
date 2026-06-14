@@ -1,27 +1,11 @@
 /**
  * features/agent/services/agentApi.ts
  * -------------------------------------
- * Llamada al endpoint del agente IA.
- * Usa el cliente axios central (lib/axios.ts) con interceptor JWT.
- * No contiene logica de negocio: solo transporte HTTP.
+ * ARCHIVO DEPRECADO — Sprint 5 (T5-04)
  *
- * Endpoint:
- *   POST /api/agent/chat/   → tenant_admin / operator (JWT)
+ * Este servicio llamaba al endpoint POST /api/agent/chat/ (Gemini/Anthropic).
+ * Fue reemplazado por botApi.ts (GET /api/bot/conversations/).
  *
- * El frontend envia el historial completo de mensajes (incluidos los bloques
- * internos de tool use) para que el backend/modelo tenga contexto completo.
- * El backend devuelve el historial actualizado y el texto de la respuesta.
+ * No se elimina para preservar el historial de git; no exporta nada.
+ * Ver: features/agent/services/botApi.ts
  */
-
-import apiClient from '@/lib/axios'
-import type { AgentChatRequest, AgentChatResponse } from '../types'
-
-export async function sendChatMessage(
-  payload: AgentChatRequest,
-): Promise<AgentChatResponse> {
-  const { data } = await apiClient.post<AgentChatResponse>(
-    '/agent/chat/',
-    payload,
-  )
-  return data
-}
