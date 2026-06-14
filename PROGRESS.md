@@ -2,7 +2,7 @@
 
 > Este archivo es la memoria viva del avance del proyecto.
 > Se actualiza al cerrar cada sprint o tarea significativa.
-> **Última actualización:** 2026-06-14 — Sprint 8 planificado (rebranding CanchaYA → CANCHERO!)
+> **Última actualización:** 2026-06-14 — Sprint 8 CERRADO (rebranding CANCHERO! mergeado a master)
 
 ---
 
@@ -18,7 +18,7 @@
 | **Sprint 5** | **Visor bot WhatsApp (demo)** | ✅ CERRADO |
 | **Sprint 6** | **Mejoras visor: dark mode, borrar, agenda, teléfono** | ✅ CERRADO |
 | **Sprint 7** | **Fix teléfonos @lid y player_name en visor bot** | 🔵 PLANIFICADO |
-| **Sprint 8** | **Rebranding CanchaYA → CANCHERO!** | 🔵 PLANIFICADO |
+| **Sprint 8** | **Rebranding CanchaYA → CANCHERO!** | ✅ CERRADO |
 
 ---
 
