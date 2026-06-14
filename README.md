@@ -158,6 +158,46 @@ El `entrypoint.sh` crea automaticamente:
 
 Cambiar estas credenciales antes de cualquier despliegue real.
 
+### ADVERTENCIA — No perder los datos de la base de datos
+
+> **Leer esto antes de ejecutar cualquier comando de Docker.**
+
+La base de datos vive en un volumen Docker llamado `postgres_data`. Ese volumen **sobrevive** a reinicios y rebuilds normales, pero **se elimina permanentemente** si usas el flag `-v`.
+
+| Comando | Qué hace con la DB |
+|---|---|
+| `docker compose down` | Detiene los contenedores. **La DB queda intacta.** |
+| `docker compose up --build` | Rebuild y arranca. **La DB queda intacta.** |
+| `git pull` + `docker compose up --build` | Actualiza el código y relanza. **La DB queda intacta.** |
+| `docker compose down -v` | **BORRA LA DB PERMANENTEMENTE.** Todos los datos se pierden. |
+
+#### Para actualizar el código sin perder datos
+
+```bash
+git pull origin master
+docker compose up --build -d
+```
+
+Eso es todo. Las migraciones nuevas se aplican solas al arrancar. Los datos persisten.
+
+#### Para empezar desde cero (reset total intencional)
+
+Solo hacé esto si querés una base de datos limpia a propósito (por ejemplo, para replicar el entorno de otro integrante o resolver una migración rota):
+
+```bash
+# ATENCION: el siguiente comando borra todos los datos de la DB sin posibilidad de recuperacion
+docker compose down -v
+docker compose up --build
+```
+
+Si tenés datos que querés conservar, hacé un backup antes:
+
+```bash
+docker compose exec db pg_dump -U canchas_user canchas_db > backup_$(date +%Y%m%d_%H%M).sql
+```
+
+---
+
 ### Comandos utiles
 
 ```bash
@@ -173,14 +213,14 @@ docker compose exec backend bash
 # Correr los tests del backend
 docker compose exec backend pytest
 
-# Correr las migraciones manualmente (si se agregan modelos)
+# Correr las migraciones manualmente (si se agregan modelos nuevos)
 docker compose exec backend python manage.py migrate_schemas --shared
 docker compose exec backend python manage.py migrate_schemas
 
-# Detener y eliminar contenedores (pero mantiene el volumen de la DB)
+# Detener los contenedores (DB intacta)
 docker compose down
 
-# Detener, eliminar contenedores Y la DB (reset total)
+# Reset total — BORRA LA DB (ver advertencia arriba)
 docker compose down -v
 ```
 
@@ -198,13 +238,48 @@ Ver `.env.example` en la raiz del proyecto. Todas las variables estan documentad
 
 ### Rollback / reset de base de datos
 
+Ver la sección **ADVERTENCIA — No perder los datos** más arriba antes de ejecutar esto.
+
 ```bash
-# Eliminar el volumen de datos (perdes todos los datos)
+# Reset total: elimina el volumen de datos (PERDES TODOS LOS DATOS, sin recuperacion)
 docker compose down -v
 
-# Volver a levantar (se recrean DB, migraciones y tenant demo)
+# Volver a levantar desde cero (recrea DB, migraciones y tenant demo)
 docker compose up --build
 ```
+
+---
+
+## Bot de WhatsApp (proyecto separado)
+
+El bot de WhatsApp es un proceso **Node.js independiente** ubicado en un repositorio aparte. El panel admin del proyecto (pestaña "Asistente") muestra en tiempo real las conversaciones que el bot tiene con los jugadores.
+
+> Repositorio del bot: [github.com/cn-10/CanchaYa_bot](https://github.com/cn-10/CanchaYa_bot)
+
+### Opción A — Trabajar sin el bot (modo demo, recomendada)
+
+No necesitás instalar el bot para desarrollar el visor. Un management command inserta conversaciones de prueba directamente en la base de datos:
+
+```bash
+# Una sola vez, después de levantar el proyecto
+docker compose exec backend python manage.py seed_bot_demo
+```
+
+Abrí el panel admin en `http://localhost:5173` → pestaña "Asistente". Vas a ver 3 conversaciones de prueba con mensajes realistas: reserva confirmada, cancelación y consulta de disponibilidad.
+
+Para limpiar los datos de prueba: usá el botón 🗑️ en el visor, o corré `seed_bot_demo --clear`.
+
+### Opción B — Con el bot real instalado
+
+Seguí la guía completa en el README del bot. Resumen de requisitos:
+
+- Node.js v18+, Ollama con el modelo `phi3:mini`, un número de WhatsApp para vincular
+- El backend Django debe estar corriendo con `docker compose up`
+- Crear al menos una cancha y sus horarios en el panel admin antes de probar
+
+Ambas opciones son compatibles. Si tenías datos de demo y querés conectar el bot real, borrá las conversaciones de prueba desde el visor con el botón 🗑️.
+
+---
 
 ### Produccion / Cliente Cero
 

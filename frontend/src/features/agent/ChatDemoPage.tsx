@@ -1,109 +1,119 @@
 /**
- * features/agent/ChatDemoPage.tsx
- * ---------------------------------
- * Pagina del chat demo con el agente IA. Ruta: /admin/agent
+ * features/agent/ChatDemoPage.tsx  →  BotViewerPage
+ * ---------------------------------------------------
+ * Visor de conversaciones del bot WhatsApp. Ruta: /admin/agent
  *
- * Simula la apariencia de WhatsApp Web para mostrar como va a verse
- * el agente IA antes de conectar la integracion real con WhatsApp.
+ * Reemplaza el chat demo con Gemini/Anthropic. Ahora muestra, en tiempo real,
+ * las conversaciones que el bot de WhatsApp (Node.js + Ollama) tiene con los
+ * jugadores, consumiendo GET /api/bot/conversations/ con polling cada 5 s.
  *
- * Funcionalidad:
- *  - Header estilo WhatsApp con avatar del bot y estado "en linea".
- *  - Fondo de chat con patron sutil estilo WhatsApp.
- *  - Burbujas de usuario (derecha, verde) y asistente (izquierda, blanca).
- *  - Indicador "escribiendo..." animado mientras espera respuesta.
- *  - Banner de error amarillo si el backend devuelve 503 (API key no configurada).
- *  - Auto-scroll al ultimo mensaje.
- *  - Boton limpiar conversacion en el header.
+ * Layout:
+ *  - Desktop (md+): dos paneles lado a lado.
+ *    Izquierdo (300 px): lista de conversaciones.
+ *    Derecho (flex-1): mensajes de la conversación seleccionada.
+ *  - Mobile: una sola columna. Si hay conversación seleccionada se muestra
+ *    el panel de detalle a pantalla completa con botón "Volver".
  *
- * Estados:
- *  - loading: indicador "escribiendo..." con tres puntos animados
- *  - error: banner amarillo con el mensaje (sin bloquear el chat)
+ * Estados contemplados:
+ *  - loading inicial: skeleton en el panel izquierdo, placeholder en el derecho
+ *  - empty: "Sin conversaciones aún. El bot aún no recibió mensajes."
+ *  - error: banner rojo con mensaje genérico
+ *  - conversación seleccionada: header + burbujas + BookingSummary (si aplica)
+ *  - polling activo: los paneles se actualizan automáticamente sin parpadeo
  */
 
-import { useEffect, useRef } from 'react'
-import { AlertTriangle } from 'lucide-react'
-import { ChatHeader } from './components/ChatHeader'
-import { ChatBubble } from './components/ChatBubble'
-import { ChatInput } from './components/ChatInput'
-import { useChat } from './hooks/useChat'
+import { useState } from 'react'
+import { AlertTriangle, ChevronLeft, RefreshCw } from 'lucide-react'
+import { ConversationList } from './components/ConversationList'
+import { ConversationDetail } from './components/ConversationDetail'
+import { useBotConversations } from './hooks/useBotConversations'
 
-// ─── Indicador "escribiendo..." ───────────────────────────────────────────────
-
-function TypingIndicator() {
-  return (
-    <div className="flex justify-start" aria-live="polite" aria-label="El asistente esta escribiendo">
-      <div
-        className="px-4 py-3 rounded-t-2xl rounded-br-2xl rounded-bl-sm shadow-sm"
-        style={{ backgroundColor: '#FFFFFF' }}
-      >
-        <div className="flex items-center gap-1" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <span
-              key={i}
-              className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Pagina principal ─────────────────────────────────────────────────────────
+// ─── Página principal ─────────────────────────────────────────────────────────
 
 export function ChatDemoPage() {
-  const { messages, isLoading, error, sendMessage, clearChat } = useChat()
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const { conversations, isLoading, isError, refetch } = useBotConversations()
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null)
 
-  // Auto-scroll al ultimo mensaje cada vez que cambia la lista o el estado de carga
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isLoading])
+  // Conversación actualmente seleccionada (o null si no hay ninguna)
+  const selectedConversation =
+    conversations.find((c) => c.phone === selectedPhone) ?? null
+
+  // En mobile: cuando se selecciona una conversación, se muestra solo el detalle.
+  const showDetailOnMobile = selectedPhone !== null
 
   return (
-    // Contenedor que ocupa el area disponible dentro del AdminLayout
-    <div className="flex flex-col h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] md:h-[calc(100vh-4rem)] overflow-hidden bg-[#0b141a]">
 
-      {/* Header estilo WhatsApp */}
-      <ChatHeader onClear={clearChat} />
-
-      {/* Banner de error (API key no configurada u otro error) */}
-      {error && (
+      {/* Banner de error */}
+      {isError && (
         <div
           role="alert"
-          className="flex items-start gap-2 px-4 py-2.5 text-sm bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300 shrink-0"
+          className="flex items-start gap-2 px-4 py-2.5 text-sm bg-red-900/30 border-b border-red-800 text-red-300 shrink-0"
         >
           <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
-          <span>{error}</span>
+          <span>
+            No se pudieron cargar las conversaciones. Verificá tu conexión e intentá de nuevo.
+          </span>
+          <button
+            type="button"
+            onClick={() => void refetch()}
+            className="ml-auto flex items-center gap-1 text-xs font-medium underline underline-offset-2 hover:no-underline shrink-0"
+            aria-label="Reintentar carga"
+          >
+            <RefreshCw size={12} aria-hidden="true" />
+            Reintentar
+          </button>
         </div>
       )}
 
-      {/* Area del chat — fondo estilo WhatsApp con patron sutil */}
-      <div
-        ref={listRef}
-        className="flex-1 overflow-y-auto px-3 py-4 space-y-2"
-        style={{ backgroundColor: '#ECE5DD' }}
-        role="list"
-        aria-label="Mensajes del chat"
-        aria-live="polite"
-        aria-relevant="additions"
-      >
-        {/* Burbujas de mensajes */}
-        {messages.map((message) => (
-          <ChatBubble key={message.id} message={message} />
-        ))}
+      {/* Cuerpo: dos paneles */}
+      <div className="flex flex-1 overflow-hidden">
 
-        {/* Indicador "escribiendo..." */}
-        {isLoading && <TypingIndicator />}
+        {/* Panel izquierdo */}
+        <div
+          className={[
+            'flex-col h-full overflow-hidden',
+            'w-full md:w-[300px] md:flex md:shrink-0',
+            showDetailOnMobile ? 'hidden' : 'flex',
+          ].join(' ')}
+        >
+          <ConversationList
+            conversations={conversations}
+            selectedPhone={selectedPhone}
+            onSelect={setSelectedPhone}
+            onDeselect={() => setSelectedPhone(null)}
+            isLoading={isLoading}
+          />
+        </div>
 
-        {/* Ancla para el auto-scroll */}
-        <div ref={bottomRef} aria-hidden="true" />
+        {/* Panel derecho */}
+        <div
+          className={[
+            'flex-col h-full overflow-hidden flex-1',
+            'md:flex',
+            showDetailOnMobile ? 'flex' : 'hidden',
+          ].join(' ')}
+        >
+          {/* Botón "Volver" solo en mobile */}
+          {showDetailOnMobile && (
+            <div className="md:hidden flex items-center px-3 py-2 border-b border-[#222e35] bg-[#202c33] shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedPhone(null)}
+                className="flex items-center gap-1 text-sm font-medium text-[#aebac1] hover:text-[#e9edef] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#005c4b] rounded"
+                aria-label="Volver a la lista de conversaciones"
+              >
+                <ChevronLeft size={18} aria-hidden="true" />
+                Volver
+              </button>
+            </div>
+          )}
+
+          <div className="flex-1 overflow-hidden">
+            <ConversationDetail conversation={selectedConversation} />
+          </div>
+        </div>
       </div>
-
-      {/* Input fijo en la parte inferior */}
-      <ChatInput onSend={(text) => void sendMessage(text)} disabled={isLoading} />
     </div>
   )
 }
