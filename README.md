@@ -143,6 +143,7 @@ Una vez que `docker compose up` termina de inicializar:
 
 | Servicio | URL | Que hace |
 |---|---|---|
+| **Landing page** | `http://localhost:3000` | Página pública de presentación de CANCHERO! |
 | Backend healthcheck | `http://localhost:8000/api/health/` | Devuelve `{"status": "ok"}` |
 | Swagger UI | `http://localhost:8000/api/docs/` | Documentacion interactiva de la API |
 | Frontend | `http://localhost:5173` | App React (dev server con hot reload) |
@@ -228,6 +229,7 @@ docker compose down -v
 
 | Puerto | Servicio | Notas |
 |---|---|---|
+| `3000` | Landing page | HTML estático servido por Nginx Alpine |
 | `8000` | Backend Django | API REST + Swagger |
 | `5173` | Frontend Vite | Dev server con hot reload |
 | `5432` | PostgreSQL | Solo para dev (DBeaver, TablePlus, etc.) — comentar en produccion |
