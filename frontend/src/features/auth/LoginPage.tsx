@@ -58,7 +58,7 @@ export function LoginPage() {
           </div>
         </div>
         <h1 className="mt-6 text-center text-2xl font-bold text-gray-900 dark:text-gray-100">
-          CanchaYA
+          CANCHERO!
         </h1>
         <p className="mt-1 text-center text-sm text-gray-500 dark:text-gray-400">
           Ingresá a tu cuenta

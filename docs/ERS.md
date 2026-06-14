@@ -1,5 +1,5 @@
 # ERS — Especificación de Requisitos de Software
-# SaaS de Gestión y Reserva de Complejos Deportivos — CanchaYA
+# SaaS de Gestión y Reserva de Complejos Deportivos — CANCHERO!
 
 **Versión:** 1.0  
 **Fecha:** 2026-06-09  
@@ -31,11 +31,11 @@
 
 ### 1.1 Propósito
 
-Este documento especifica los requisitos del software **CanchaYA**, un SaaS B2B multi-tenant de gestión y reserva de complejos deportivos. Está dirigido al equipo de desarrollo, a los agentes IA que construyen el sistema y a los stakeholders del proyecto (Milton, Cliente Cero).
+Este documento especifica los requisitos del software **CANCHERO!**, un SaaS B2B multi-tenant de gestión y reserva de complejos deportivos. Está dirigido al equipo de desarrollo, a los agentes IA que construyen el sistema y a los stakeholders del proyecto (Milton, Cliente Cero).
 
 ### 1.2 Alcance
 
-**CanchaYA** reemplaza la gestión manual de reservas (WhatsApp + Excel) de complejos de Fútbol 5/7 y Pádel. Opera como un "recepcionista digital 24/7": cada complejo obtiene su propio entorno marca blanca con grilla de turnos pública, motor de reservas sin overbooking y caja diaria básica.
+**CANCHERO!** reemplaza la gestión manual de reservas (WhatsApp + Excel) de complejos de Fútbol 5/7 y Pádel. Opera como un "recepcionista digital 24/7": cada complejo obtiene su propio entorno marca blanca con grilla de turnos pública, motor de reservas sin overbooking y caja diaria básica.
 
 **Incluido en el MVP:**
 - Módulo de aislamiento multi-tenant por esquema PostgreSQL.
@@ -100,7 +100,7 @@ La sección 2 describe el contexto del sistema y los problemas que resuelve. La 
 
 ### 2.1 Perspectiva del producto
 
-CanchaYA es un SaaS multi-tenant de nueva creación, sin integración con sistemas legados. Cada complejo cliente opera bajo su propia URL (subdominio o dominio propio) con datos completamente aislados de los demás complejos.
+CANCHERO! es un SaaS multi-tenant de nueva creación, sin integración con sistemas legados. Cada complejo cliente opera bajo su propia URL (subdominio o dominio propio) con datos completamente aislados de los demás complejos.
 
 ```
 Jugador (celular)
@@ -153,7 +153,7 @@ Los complejos chicos y medianos gestionan reservas de forma manual y frágil:
 
 | Actor | Código de rol | Descripción | Canal de acceso |
 |---|---|---|---|
-| **Administrador de plataforma** | `system_admin` | Equipo CanchaYA. Da de alta complejos, soporte global. Opera en esquema `public`. | Panel Django Admin / CLI |
+| **Administrador de plataforma** | `system_admin` | Equipo CANCHERO!. Da de alta complejos, soporte global. Opera en esquema `public`. | Panel Django Admin / CLI |
 | **Dueño del complejo** | `tenant_admin` | Administra canchas, precios, horarios y usuarios internos de su complejo. | Panel web (SPA admin) |
 | **Cajero / Recepcionista** | `operator` | Personal que opera el día a día: confirma reservas, registra señas, cierra caja. | Panel web (SPA admin) |
 | **Jugador / Cliente final** | `player` | Reserva turnos; puede tener cuenta o reservar como invitado. | Grilla pública (SPA móvil) |
@@ -746,7 +746,7 @@ Todos los listados están paginados:
 ```json
 {
   "count": 120,
-  "next": "https://tenant.canchaYA.com/api/bookings/?page=2",
+  "next": "https://tenant.canchero.com/api/bookings/?page=2",
   "previous": null,
   "results": []
 }

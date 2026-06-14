@@ -255,6 +255,7 @@ docker compose up --build
 El bot de WhatsApp es un proceso **Node.js independiente** ubicado en un repositorio aparte. El panel admin del proyecto (pestaña "Asistente") muestra en tiempo real las conversaciones que el bot tiene con los jugadores.
 
 > Repositorio del bot: [github.com/cn-10/CanchaYa_bot](https://github.com/cn-10/CanchaYa_bot)
+> ⚠️ **Pendiente de renombrar** a `canchero-bot` en GitHub como parte del rebranding (Sprint 8).
 
 ### Opción A — Trabajar sin el bot (modo demo, recomendada)
 

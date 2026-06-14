@@ -123,7 +123,7 @@ def notify_booking_created(booking) -> None:
             f"Tu reserva está pendiente de confirmación. "
             f"Te avisaremos cuando el equipo verifique la seña.\n\n"
             f"¡Gracias por reservar!\n"
-            f"El equipo de CanchaYA"
+            f"El equipo de CANCHERO!"
         )
 
         send_mail(
@@ -176,7 +176,7 @@ def notify_booking_confirmed(booking) -> None:
             f"  Horario: {hora_inicio} – {hora_fin}\n"
             f"  Precio:  ${booking.price}\n\n"
             f"¡Nos vemos!\n"
-            f"El equipo de CanchaYA"
+            f"El equipo de CANCHERO!"
         )
 
         send_mail(
@@ -230,7 +230,7 @@ def notify_booking_cancelled(booking) -> None:
             f"  Horario: {hora_inicio} – {hora_fin}\n"
             f"  Motivo:  {motivo}\n\n"
             f"Si tenés dudas, contactá al complejo.\n"
-            f"El equipo de CanchaYA"
+            f"El equipo de CANCHERO!"
         )
 
         send_mail(
