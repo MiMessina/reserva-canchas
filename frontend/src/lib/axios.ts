@@ -19,8 +19,8 @@ import axios, {
 import type { RefreshResponse } from '@/types/auth'
 
 // Claves de localStorage. Centralizadas acá para evitar typos.
-export const TOKEN_KEY = 'canchaYA_access'
-export const REFRESH_KEY = 'canchaYA_refresh'
+export const TOKEN_KEY = 'canchero_access'
+export const REFRESH_KEY = 'canchero_refresh'
 
 // ─── Helpers de token ─────────────────────────────────────────────────────────
 

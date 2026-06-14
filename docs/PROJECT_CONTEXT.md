@@ -3,7 +3,7 @@
 
 ## 1. Nombre del proyecto
 
-**Nombre:** `CanchaYA` (SaaS de Gestión y Reserva de Complejos Deportivos)
+**Nombre:** `CANCHERO!` (SaaS de Gestión y Reserva de Complejos Deportivos)
 
 > Nombre de trabajo interno. El producto es **marca blanca**: cada complejo opera bajo su propia URL/entorno, no bajo una marca común visible al jugador.
 

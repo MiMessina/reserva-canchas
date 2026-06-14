@@ -271,7 +271,7 @@ CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.str
 # drf-spectacular (Swagger / OpenAPI)
 # ---------------------------------------------------------------------------
 SPECTACULAR_SETTINGS = {
-    "TITLE": "CanchaYA API",
+    "TITLE": "CANCHERO! API",
     "DESCRIPTION": (
         "API REST para el SaaS multi-tenant de gestión y reserva de complejos deportivos. "
         "Autenticación: Bearer JWT. Cada tenant opera en su propio esquema PostgreSQL."
@@ -316,7 +316,7 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.environ.get(
-    "DEFAULT_FROM_EMAIL", "CanchaYA <noreply@canchaYA.com>"
+    "DEFAULT_FROM_EMAIL", "CANCHERO! <noreply@canchero.com>"
 )
 
 # ---------------------------------------------------------------------------

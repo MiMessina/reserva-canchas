@@ -136,7 +136,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
             <span className="text-white font-bold text-sm">C</span>
           </div>
           <span className="text-base font-semibold text-gray-900 dark:text-white tracking-tight">
-            CanchaYA
+            CANCHERO!
           </span>
         </div>
 
@@ -224,7 +224,7 @@ export function NavBar({ user, onLogout }: NavBarProps) {
         >
           <span className="text-white font-bold text-xs">C</span>
         </div>
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">CanchaYA</span>
+        <span className="text-sm font-semibold text-gray-900 dark:text-white">CANCHERO!</span>
         {/* Boton toggle dark mode en mobile */}
         <button
           type="button"

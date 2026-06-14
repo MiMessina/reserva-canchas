@@ -1,8 +1,8 @@
-# PROGRESS.md — Estado del Proyecto CanchaYA
+# PROGRESS.md — Estado del Proyecto CANCHERO!
 
 > Este archivo es la memoria viva del avance del proyecto.
 > Se actualiza al cerrar cada sprint o tarea significativa.
-> **Última actualización:** 2026-06-14 — Sprint 7 planificado (fix teléfonos @lid y player_name)
+> **Última actualización:** 2026-06-14 — Sprint 8 planificado (rebranding CanchaYA → CANCHERO!)
 
 ---
 
@@ -18,6 +18,7 @@
 | **Sprint 5** | **Visor bot WhatsApp (demo)** | ✅ CERRADO |
 | **Sprint 6** | **Mejoras visor: dark mode, borrar, agenda, teléfono** | ✅ CERRADO |
 | **Sprint 7** | **Fix teléfonos @lid y player_name en visor bot** | 🔵 PLANIFICADO |
+| **Sprint 8** | **Rebranding CanchaYA → CANCHERO!** | 🔵 PLANIFICADO |
 
 ---
 
@@ -623,3 +624,199 @@ T7-01 primero: sin el teléfono correcto, T7-02 graba el nombre bajo un ID incor
 - [ ] El bot no se rompe si `getContact()` lanza error (fallo silencioso)
 - [ ] Sin regresión en flujo de reserva ni cancelación
 - [ ] Los 58 registros históricos con `@lid` permanecen en la DB sin problema
+
+---
+
+## Sprint 8 — Rebranding CanchaYA → CANCHERO!
+
+### Objetivo
+
+Cambiar el nombre comercial del producto de `CanchaYA` a `CANCHERO!` en todos los archivos
+del proyecto: documentación, backend, frontend y configuración. Sin cambios de arquitectura,
+modelos, migraciones ni lógica de negocio.
+
+### ADR
+
+Ver `docs/adr/ADR-012-rebranding-canchero.md` para la decisión y el razonamiento.
+
+### Rama
+
+`feat/rebranding-canchero` (rama nueva desde `master`)
+
+### Regla de nombres
+
+| Contexto | Nombre a usar |
+|---|---|
+| UI visible (navbar, login, título, emails) | `CANCHERO!` |
+| Identificadores técnicos (package, localStorage, email, alias) | `canchero` |
+| Título Swagger | `CANCHERO! API` |
+
+El `!` **no se usa** en identificadores técnicos.
+
+---
+
+### Tareas
+
+---
+
+#### T8-01 — Documentación
+
+**Archivos:**
+- `docs/PROJECT_CONTEXT.md`
+- `docs/ERS.md`
+- `PROGRESS.md` (ya actualizado en este commit)
+- `README.md`
+- `docs/ARCHITECTURE.md` — agregar ADR-012 a la lista §10
+
+**Cambios:**
+- Reemplazar todas las ocurrencias de `CanchaYA` por `CANCHERO!`
+- En `README.md`: el link al repo del bot (`github.com/cn-10/CanchaYa_bot`) se deja como
+  **pendiente** hasta que se renombre el repositorio remoto de GitHub
+
+**Criterios de aceptación:**
+- [ ] `docs/PROJECT_CONTEXT.md` no contiene `CanchaYA`
+- [ ] `docs/ERS.md` no contiene `CanchaYA`
+- [ ] `docs/ARCHITECTURE.md` lista ADR-012 en §10
+- [ ] `README.md` tiene una nota indicando que el repo del bot está pendiente de renombrar
+
+---
+
+#### T8-02 — Backend
+
+**Archivos:**
+- `backend/config/settings.py`
+- `backend/apps/bookings/notifications.py`
+- `backend/apps/agent/management/commands/seed_bot_demo.py`
+- `.env.example`
+
+**Cambios exactos:**
+
+`settings.py`:
+```python
+# Antes:
+"TITLE": "CanchaYA API"
+# Después:
+"TITLE": "CANCHERO! API"
+
+# Antes:
+"DEFAULT_FROM_EMAIL", "CanchaYA <noreply@canchaYA.com>"
+# Después:
+"DEFAULT_FROM_EMAIL", "CANCHERO! <noreply@canchero.com>"
+```
+
+`notifications.py` (3 ocurrencias):
+```python
+# Antes:
+f"El equipo de CanchaYA"
+# Después:
+f"El equipo de CANCHERO!"
+```
+
+`seed_bot_demo.py` (2 mensajes con el nombre):
+```python
+# "soy el bot de *CanchaYA*" → "soy el bot de *CANCHERO!*"
+# Alias "CANCHAYA.DEMO" → "CANCHERO.DEMO"
+```
+
+`.env.example`:
+```bash
+# canchaYA.com → canchero.com  (dominio de ejemplo)
+# CanchaYA <reservas@canchaYA.com> → CANCHERO! <reservas@canchero.com>
+```
+
+**Criterios de aceptación:**
+- [ ] `settings.py`: el Swagger sirve con título `CANCHERO! API`
+- [ ] `notifications.py`: la firma de emails dice `El equipo de CANCHERO!`
+- [ ] `seed_bot_demo.py`: los mensajes de demo usan el nombre nuevo
+- [ ] `.env.example`: no quedan referencias a `canchaYA.com`
+
+---
+
+#### T8-03 — Frontend
+
+**Archivos:**
+- `frontend/index.html`
+- `frontend/src/components/NavBar.tsx`
+- `frontend/src/features/auth/LoginPage.tsx`
+- `frontend/src/lib/axios.ts`
+- `frontend/package.json`
+
+**Cambios exactos:**
+
+`index.html`:
+```html
+<!-- Antes: -->
+<title>CanchaYA</title>
+<!-- Después: -->
+<title>CANCHERO!</title>
+```
+
+`NavBar.tsx` (2 ocurrencias del texto de marca):
+```tsx
+// "CanchaYA" → "CANCHERO!"
+```
+
+`LoginPage.tsx`:
+```tsx
+// "CanchaYA" → "CANCHERO!"
+```
+
+`axios.ts`:
+```typescript
+// Antes:
+export const TOKEN_KEY    = 'canchaYA_access'
+export const REFRESH_KEY  = 'canchaYA_refresh'
+// Después:
+export const TOKEN_KEY    = 'canchero_access'
+export const REFRESH_KEY  = 'canchero_refresh'
+```
+
+`package.json`:
+```json
+// Antes: "name": "canchaYA-frontend"
+// Después: "name": "canchero-frontend"
+```
+
+**Post-cambio obligatorio:**
+```bash
+cd frontend && npm install
+# Regenera package-lock.json con el nombre nuevo
+```
+
+**Nota sobre localStorage:** El cambio de keys desloguea a los usuarios actuales en dev.
+Acción requerida una sola vez: limpiar el localStorage del browser.
+
+**Criterios de aceptación:**
+- [ ] La pestaña del browser muestra `CANCHERO!`
+- [ ] El navbar y la pantalla de login muestran `CANCHERO!`
+- [ ] `package.json` tiene `"name": "canchero-frontend"`
+- [ ] `npm install` corre sin errores y `package-lock.json` queda actualizado
+- [ ] El login funciona correctamente (las nuevas keys de localStorage funcionan)
+
+---
+
+### Orden de ejecución
+
+```
+T8-01 (docs) → T8-02 (backend) → T8-03 (frontend) → npm install → smoke test
+```
+
+T8-01 y T8-02 son independientes entre sí (se pueden hacer en paralelo).
+T8-03 va al final por el `npm install` posterior.
+
+### Definition of Done del Sprint 8
+
+- [ ] Ningún archivo del proyecto contiene `CanchaYA` (excepto la nota en `README.md` sobre el repo del bot)
+- [ ] La UI muestra `CANCHERO!` en todos los puntos de contacto (tab, navbar, login)
+- [ ] El Swagger sirve con título `CANCHERO! API`
+- [ ] Los emails de notificación firman como `El equipo de CANCHERO!`
+- [ ] `npm install` corre sin errores en `frontend/`
+- [ ] El proyecto levanta con `docker compose up` sin errores
+- [ ] El login funciona con las nuevas keys de localStorage
+- [ ] ADR-012 creado y referenciado en `ARCHITECTURE.md` §10
+
+### Deuda técnica post-Sprint 8
+
+- Renombrar el repositorio del bot en GitHub (`cn-10/CanchaYa_bot` → `cn-10/canchero-bot`)
+  y actualizar el link en `README.md`
+- Al definir el dominio de producción del Cliente Cero, evaluar `canchero.com` / `canchero.com.ar`
