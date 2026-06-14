@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CANCHERO! — El sistema que trabaja mientras vos jugás</title>
+  <meta name="description" content="SaaS de gestión y reserva de complejos deportivos. Sin WhatsApp ni Excel." />
+
+  <!-- Tailwind CDN (requiere internet) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            }
+          },
+          fontFamily: {
+            sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── Fondos por sección ── */
+    .section-base      { background: #030712; }
+    .section-green     { background: #060f09; }
+    .section-raised    { background: #0d1117; }
+    .section-mid       { background: #0a0e13; }
+    .section-cta       { background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(34,197,94,0.10), transparent), #060f09; }
+
+    /* ── Gradiente radial del hero ── */
+    .hero-bg {
+      background:
+        radial-gradient(ellipse 90% 60% at 50% -5%, rgba(34,197,94,0.13), transparent 70%),
+        #030712;
+    }
+
+    /* ── Animación badge ── */
+    @keyframes pulse-soft { 0%,100%{opacity:1} 50%{opacity:.65} }
+    .pulse-soft { animation: pulse-soft 2.8s ease-in-out infinite; }
+
+    /* ── Botón hero — gradiente animado + shine ── */
+    @keyframes btn-gradient {
+      0%,100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+    @keyframes btn-shine {
+      0%   { left: -80%; }
+      100% { left: 160%; }
+    }
+    .btn-login-hero {
+      display:         inline-flex;
+      align-items:     center;
+      gap:             0.85rem;
+      background:      linear-gradient(135deg, #22c55e 0%, #16a34a 40%, #0d9488 70%, #16a34a 100%);
+      background-size: 250% 250%;
+      animation:       btn-gradient 4s ease infinite;
+      color:           #fff;
+      font-weight:     700;
+      font-size:       1.05rem;
+      letter-spacing:  0.01em;
+      padding:         0.95rem 2.2rem;
+      border-radius:   1rem;
+      position:        relative;
+      overflow:        hidden;
+      cursor:          pointer;
+      text-decoration: none;
+      box-shadow:
+        0 0 0 1px rgba(34,197,94,0.25),
+        0 0 28px rgba(34,197,94,0.30),
+        0 6px 24px rgba(0,0,0,0.40);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .btn-login-hero:hover {
+      transform:  translateY(-3px) scale(1.025);
+      box-shadow:
+        0 0 0 1px rgba(34,197,94,0.40),
+        0 0 48px rgba(34,197,94,0.45),
+        0 10px 36px rgba(0,0,0,0.45);
+    }
+    .btn-login-hero:active {
+      transform: translateY(0) scale(0.99);
+    }
+    /* Barrido de luz */
+    .btn-login-hero::after {
+      content:    '';
+      position:   absolute;
+      top:        -60%;
+      left:       -80%;
+      width:      45%;
+      height:     220%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.20), transparent);
+      transform:  skewX(-18deg);
+      animation:  btn-shine 3.8s ease-in-out infinite;
+    }
+    /* Ícono SVG dentro del botón */
+    .btn-login-hero .btn-icon {
+      width:      2.2rem;
+      height:     2.2rem;
+      background: rgba(0,0,0,0.18);
+      border-radius: 0.55rem;
+      display:    flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .btn-login-hero:hover .btn-icon {
+      background: rgba(0,0,0,0.28);
+    }
+
+    /* ── Carrusel ── */
+    #carousel-track {
+      display: flex;
+      width: 300%;          /* 3 páginas */
+      transition: transform 0.55s cubic-bezier(.4,0,.2,1);
+    }
+    .carousel-page {
+      width: 33.333%;       /* 1 página = 1/3 del track */
+      display: grid;
+      grid-template-columns: repeat(3,1fr);
+      gap: 1rem;
+      padding: 0 0.25rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Cards del carrusel (gradiente CSS, sin imágenes externas) ── */
+    .court-card {
+      border-radius: 1rem;
+      padding: 1.5rem 1.25rem;
+      border: 1px solid rgba(255,255,255,.07);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-height: 10rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .court-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: inherit;
+      filter: brightness(.85);
+      z-index: 0;
+    }
+    .court-card > * { position: relative; z-index: 1; }
+
+    .card-indigo   { background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%); }
+    .card-emerald  { background: linear-gradient(135deg, #064e3b 0%, #111827 100%); }
+    .card-amber    { background: linear-gradient(135deg, #451a03 0%, #111827 100%); }
+    .card-cyan     { background: linear-gradient(135deg, #083344 0%, #111827 100%); }
+    .card-violet   { background: linear-gradient(135deg, #2e1065 0%, #111827 100%); }
+    .card-rose     { background: linear-gradient(135deg, #4c0519 0%, #111827 100%); }
+    .card-teal     { background: linear-gradient(135deg, #042f2e 0%, #111827 100%); }
+    .card-orange   { background: linear-gradient(135deg, #431407 0%, #111827 100%); }
+    .card-sky      { background: linear-gradient(135deg, #082f49 0%, #111827 100%); }
+
+    /* ── Dots del carrusel ── */
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #374151;
+      transition: background .3s, transform .3s;
+      cursor: pointer;
+    }
+    .dot.active { background: #22c55e; transform: scale(1.3); }
+
+    /* ── Formulario visual ── */
+    .form-input {
+      width: 100%;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 0.6rem;
+      padding: 0.65rem 0.9rem;
+      color: #f3f4f6;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-input:focus { border-color: #22c55e; }
+    .form-input::placeholder { color: #6b7280; }
+
+    /* ── Scroll suave en anchor links ── */
+    html { scroll-behavior: smooth; }
+
+    /* ── Pain point icon shimmer ── */
+    .pain-icon {
+      font-size: 1.75rem;
+      line-height: 1;
+      filter: grayscale(.2);
+    }
+  </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 antialiased">
+
+<!-- ═══════════════════════════════════════════════════════
+     NAVBAR — solo links de scroll, sin CTA
+════════════════════════════════════════════════════════ -->
+<header class="fixed top-0 inset-x-0 z-50 border-b border-gray-800/50 bg-gray-950/85 backdrop-blur-md">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+
+    <!-- Logo -->
+    <a href="#" class="flex items-center gap-2.5">
+      <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center shrink-0">
+        <span class="text-white font-bold text-sm select-none">C</span>
+      </div>
+      <span class="font-bold text-lg tracking-tight text-white">CANCHERO!</span>
+    </a>
+
+    <!-- Nav links desktop -->
+    <nav class="hidden md:flex items-center gap-7 text-sm text-gray-400">
+      <a href="#funcionalidades" class="hover:text-white transition-colors">Funcionalidades</a>
+      <a href="#como-funciona"   class="hover:text-white transition-colors">¿Cómo funciona?</a>
+      <a href="#clientes"        class="hover:text-white transition-colors">Clientes</a>
+      <a href="#contacto"        class="hover:text-white transition-colors">Contacto</a>
+    </nav>
+
+    <!-- Botón login (desktop) -->
+    <a href="http://localhost:5173/login"
+       class="hidden md:flex items-center justify-center w-9 h-9 rounded-lg
+              bg-gray-800 hover:bg-brand-600 border border-gray-700 hover:border-brand-600
+              transition-colors duration-150 group"
+       title="Ingresar al panel">
+      <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+           class="text-gray-400 group-hover:text-white transition-colors">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </a>
+
+    <!-- Menú mobile placeholder (solo visual) -->
+    <button class="md:hidden text-gray-400 hover:text-white" aria-label="Menú">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6"  x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════ -->
+<section class="hero-bg pt-32 pb-24 px-4 sm:px-6 text-center">
+  <div class="max-w-3xl mx-auto">
+
+    <!-- Badge -->
+    <div class="inline-flex items-center gap-2 bg-brand-600/10 border border-brand-600/30 text-brand-400
+                text-xs font-semibold px-3 py-1.5 rounded-full mb-10 pulse-soft select-none">
+      <span class="w-1.5 h-1.5 rounded-full bg-brand-500 inline-block"></span>
+      Gestión deportiva profesional · Fútbol 5 · Fútbol 7 · Pádel
+    </div>
+
+    <!-- Título principal -->
+    <h1 class="text-4xl sm:text-5xl md:text-[3.75rem] font-extrabold tracking-tight leading-tight text-white mb-6">
+      Tu complejo deportivo,<br/>
+      <span class="text-brand-500">a otro nivel.</span>
+    </h1>
+
+    <!-- Subtítulo -->
+    <p class="text-lg sm:text-xl text-gray-400 leading-relaxed max-w-2xl mx-auto">
+      Dejá atrás el caos de gestionar reservas a mano.<br class="hidden sm:block"/>
+      Con CANCHERO! tus clientes reservan cuando quieren
+      y vos te enfocás en hacer crecer tu negocio.
+    </p>
+
+    <!-- Stats pill -->
+    <div class="mt-16 flex flex-wrap justify-center gap-8 text-sm text-gray-500">
+      <div class="text-center">
+        <p class="text-2xl font-bold text-white">0</p>
+        <p>overbookings</p>
+      </div>
+      <div class="w-px h-10 bg-gray-800 self-center hidden sm:block"></div>
+      <div class="text-center">
+        <p class="text-2xl font-bold text-white">24/7</p>
+        <p>disponible</p>
+      </div>
+      <div class="w-px h-10 bg-gray-800 self-center hidden sm:block"></div>
+      <div class="text-center">
+        <p class="text-2xl font-bold text-white">9</p>
+        <p>complejos activos</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PAIN POINTS — ¿Te suena familiar?
+════════════════════════════════════════════════════════ -->
+<section class="section-green py-16 px-4 sm:px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <p class="text-center text-xs font-semibold tracking-widest uppercase text-gray-600 mb-10">
+      ¿Te suena familiar?
+    </p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 flex flex-col gap-3">
+        <span class="pain-icon">📱</span>
+        <p class="font-semibold text-gray-200 text-sm leading-snug">
+          "Reservas por WhatsApp que se pierden entre mensajes"
+        </p>
+        <p class="text-xs text-gray-500">
+          Perdés tiempo y clientes porque no podés responder a todas horas.
+        </p>
+      </div>
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 flex flex-col gap-3">
+        <span class="pain-icon">📋</span>
+        <p class="font-semibold text-gray-200 text-sm leading-snug">
+          "Una planilla de Excel que nadie actualiza a tiempo"
+        </p>
+        <p class="text-xs text-gray-500">
+          Sin control en tiempo real no sabés qué cancha está libre ni cuánto entró hoy.
+        </p>
+      </div>
+
+      <div class="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 flex flex-col gap-3">
+        <span class="pain-icon">😤</span>
+        <p class="font-semibold text-gray-200 text-sm leading-snug">
+          "Dos jugadores reservaron la misma cancha otra vez"
+        </p>
+        <p class="text-xs text-gray-500">
+          El overbooking daña la reputación de tu complejo y genera conflictos innecesarios.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Puente hacia la solución -->
+    <p class="text-center text-gray-500 mt-10 text-sm">
+      CANCHERO! resuelve los tres. Desde el primer día.
+    </p>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FEATURES
+════════════════════════════════════════════════════════ -->
+<section id="funcionalidades" class="section-raised py-20 px-4 sm:px-6">
+  <div class="max-w-6xl mx-auto">
+
+    <div class="text-center mb-14">
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">Todo lo que necesitás</h2>
+      <p class="text-gray-400 max-w-xl mx-auto">
+        Un sistema completo para gestionar tu complejo, desde la reserva hasta la caja del día.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-brand-600/40 transition-colors">
+        <div class="w-10 h-10 bg-brand-600/15 rounded-xl flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-2">Sin overbooking garantizado</h3>
+        <p class="text-sm text-gray-400 leading-relaxed">
+          Motor de reservas con bloqueo de concurrencia. Dos jugadores no pueden reservar
+          el mismo turno simultáneamente.
+        </p>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-brand-600/40 transition-colors">
+        <div class="w-10 h-10 bg-brand-600/15 rounded-xl flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-2">Grilla de turnos en tiempo real</h3>
+        <p class="text-sm text-gray-400 leading-relaxed">
+          Tus clientes ven qué canchas están disponibles y reservan con su nombre y teléfono
+          desde el celular en segundos.
+        </p>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-brand-600/40 transition-colors">
+        <div class="w-10 h-10 bg-brand-600/15 rounded-xl flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <line x1="2" y1="10" x2="22" y2="10"/>
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-2">Caja del día integrada</h3>
+        <p class="text-sm text-gray-400 leading-relaxed">
+          El cajero confirma señas y el sistema registra cada movimiento. Cerrá el día
+          sabiendo exactamente cuánto entró.
+        </p>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-brand-600/40 transition-colors">
+        <div class="w-10 h-10 bg-brand-600/15 rounded-xl flex items-center justify-center mb-4">
+          <!-- Ícono chat / WhatsApp -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-2">Asistente por WhatsApp</h3>
+        <p class="text-sm text-gray-400 leading-relaxed">
+          Tus clientes pueden consultar disponibilidad y reservar directamente desde WhatsApp.
+          El asistente responde solo, sin que vos tengas que estar presente.
+        </p>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-brand-600/40 transition-colors">
+        <div class="w-10 h-10 bg-brand-600/15 rounded-xl flex items-center justify-center mb-4">
+          <!-- Ícono sliders / configuración -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4"  y1="6"  x2="20" y2="6"/>
+            <line x1="4"  y1="12" x2="20" y2="12"/>
+            <line x1="4"  y1="18" x2="20" y2="18"/>
+            <circle cx="8"  cy="6"  r="2" fill="#22c55e" stroke="none"/>
+            <circle cx="16" cy="12" r="2" fill="#22c55e" stroke="none"/>
+            <circle cx="10" cy="18" r="2" fill="#22c55e" stroke="none"/>
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-2">Configuración en minutos</h3>
+        <p class="text-sm text-gray-400 leading-relaxed">
+          Cargás tus canchas, horarios y precios una sola vez. Sin conocimientos técnicos.
+          El sistema se encarga del resto desde el primer día.
+        </p>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 hover:border-brand-600/40 transition-colors">
+        <div class="w-10 h-10 bg-brand-600/15 rounded-xl flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+            <line x1="12" y1="18" x2="12.01" y2="18"/>
+          </svg>
+        </div>
+        <h3 class="font-semibold text-white mb-2">Desde cualquier dispositivo</h3>
+        <p class="text-sm text-gray-400 leading-relaxed">
+          Tu panel disponible en el celular, tablet o computadora. Gestioná tu complejo
+          desde donde estés, en tiempo real.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CARRUSEL — Ya trabajan con nosotros
+════════════════════════════════════════════════════════ -->
+<section id="clientes" class="section-mid py-20 px-4 sm:px-6">
+  <div class="max-w-6xl mx-auto">
+
+    <div class="text-center mb-12">
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">Complejos que eligieron CANCHERO!</h2>
+      <p class="text-gray-400">Fútbol 5, Fútbol 7 y Pádel en todo el Gran Buenos Aires.</p>
+    </div>
+
+    <!-- Contenedor del carrusel -->
+    <div class="relative">
+
+      <!-- Track -->
+      <div class="overflow-hidden rounded-2xl" id="carousel-wrapper">
+        <div id="carousel-track">
+
+          <!-- Página 1 (cards 1–3) -->
+          <div class="carousel-page">
+            <div class="court-card card-indigo">
+              <span style="font-size:2rem">⚽</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">Los Pinos F5</p>
+                <p class="text-xs text-gray-400 mt-0.5">Palermo · Fútbol 5</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-indigo-500/20 text-indigo-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+            <div class="court-card card-emerald">
+              <span style="font-size:2rem">🎾</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">Pádel Belgrano</p>
+                <p class="text-xs text-gray-400 mt-0.5">Belgrano · Pádel</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-emerald-500/20 text-emerald-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+            <div class="court-card card-amber">
+              <span style="font-size:2rem">⚽</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">F5 Caballito</p>
+                <p class="text-xs text-gray-400 mt-0.5">Caballito · Fútbol 5</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-amber-500/20 text-amber-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+          </div>
+
+          <!-- Página 2 (cards 4–6) -->
+          <div class="carousel-page">
+            <div class="court-card card-cyan">
+              <span style="font-size:2rem">🏟️</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">Arena Deportiva</p>
+                <p class="text-xs text-gray-400 mt-0.5">Lomas de Zamora · F7</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-cyan-500/20 text-cyan-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+            <div class="court-card card-violet">
+              <span style="font-size:2rem">⚽</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">Complejo Norte</p>
+                <p class="text-xs text-gray-400 mt-0.5">Villa Urquiza · Fútbol 5</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-violet-500/20 text-violet-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+            <div class="court-card card-rose">
+              <span style="font-size:2rem">🎾</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">Pádel & Más</p>
+                <p class="text-xs text-gray-400 mt-0.5">Flores · Pádel</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-rose-500/20 text-rose-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+          </div>
+
+          <!-- Página 3 (cards 7–9) -->
+          <div class="carousel-page">
+            <div class="court-card card-teal">
+              <span style="font-size:2rem">🏟️</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">El Galpón F7</p>
+                <p class="text-xs text-gray-400 mt-0.5">San Martín · Fútbol 7</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-teal-500/20 text-teal-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+            <div class="court-card card-orange">
+              <span style="font-size:2rem">🎾</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">Club Sport Quilmes</p>
+                <p class="text-xs text-gray-400 mt-0.5">Quilmes · Pádel</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-orange-500/20 text-orange-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+            <div class="court-card card-sky">
+              <span style="font-size:2rem">⚽</span>
+              <div>
+                <p class="font-bold text-white text-sm leading-tight">F5 Almagro</p>
+                <p class="text-xs text-gray-400 mt-0.5">Almagro · Fútbol 5</p>
+              </div>
+              <span class="inline-block text-xs font-semibold bg-sky-500/20 text-sky-300 rounded-full px-2.5 py-0.5 w-fit">Activo</span>
+            </div>
+          </div>
+
+        </div><!-- /track -->
+      </div><!-- /wrapper -->
+
+      <!-- Botón prev -->
+      <button id="carousel-prev" onclick="carousel.prev()"
+              class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4
+                     w-10 h-10 rounded-full bg-gray-800 border border-gray-700
+                     hover:bg-gray-700 transition-colors flex items-center justify-center
+                     text-gray-300 hover:text-white shadow-lg"
+              aria-label="Anterior">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+
+      <!-- Botón next -->
+      <button id="carousel-next" onclick="carousel.next()"
+              class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4
+                     w-10 h-10 rounded-full bg-gray-800 border border-gray-700
+                     hover:bg-gray-700 transition-colors flex items-center justify-center
+                     text-gray-300 hover:text-white shadow-lg"
+              aria-label="Siguiente">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+
+    </div><!-- /relative -->
+
+    <!-- Dots -->
+    <div class="flex justify-center gap-2.5 mt-7">
+      <button class="dot active" onclick="carousel.go(0)" aria-label="Página 1"></button>
+      <button class="dot"        onclick="carousel.go(1)" aria-label="Página 2"></button>
+      <button class="dot"        onclick="carousel.go(2)" aria-label="Página 3"></button>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CÓMO FUNCIONA
+════════════════════════════════════════════════════════ -->
+<section id="como-funciona" class="section-base py-20 px-4 sm:px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <div class="text-center mb-14">
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">¿Cómo funciona?</h2>
+      <p class="text-gray-400">Tres pasos, sin complicaciones.</p>
+    </div>
+
+    <div class="space-y-5">
+
+      <div class="flex gap-5 items-start bg-gray-900 border border-gray-800 rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl bg-brand-600 text-white font-bold text-lg
+                    flex items-center justify-center shrink-0">1</div>
+        <div>
+          <h3 class="font-semibold text-white mb-1">El jugador ve la grilla de turnos</h3>
+          <p class="text-sm text-gray-400">
+            Accede al link del complejo desde Instagram o WhatsApp. Ve en tiempo real
+            qué canchas y horarios están libres para el día que quiere jugar.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex gap-5 items-start bg-gray-900 border border-gray-800 rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl bg-brand-600 text-white font-bold text-lg
+                    flex items-center justify-center shrink-0">2</div>
+        <div>
+          <h3 class="font-semibold text-white mb-1">Reserva y envía la seña</h3>
+          <p class="text-sm text-gray-400">
+            Elige su turno, ingresa nombre y teléfono, y confirma. La reserva queda
+            registrada al instante. Luego envía la seña por transferencia al complejo.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex gap-5 items-start bg-gray-900 border border-gray-800 rounded-2xl p-6">
+        <div class="w-10 h-10 rounded-xl bg-brand-600 text-white font-bold text-lg
+                    flex items-center justify-center shrink-0">3</div>
+        <div>
+          <h3 class="font-semibold text-white mb-1">El cajero confirma y registra en la caja</h3>
+          <p class="text-sm text-gray-400">
+            Desde el panel, el cajero verifica la transferencia, confirma la reserva y queda
+            registrada en la caja del día. El turno está asegurado.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     PARA QUIÉN
+════════════════════════════════════════════════════════ -->
+<section class="section-raised py-20 px-4 sm:px-6">
+  <div class="max-w-4xl mx-auto">
+
+    <div class="text-center mb-14">
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">Hecho para tu negocio</h2>
+      <p class="text-gray-400 max-w-xl mx-auto">
+        CANCHERO! está pensado para los dueños y el equipo de complejos deportivos que quieren
+        dejar atrás la gestión manual y escalar su operación.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-3">
+        <div class="w-11 h-11 bg-brand-600/15 rounded-xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-semibold text-white mb-1.5">Dueño del complejo</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Controlás canchas, precios, horarios y reportes desde un panel claro.
+            Sabés en tiempo real cuánto entra y qué canchas están ocupadas.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-3">
+        <div class="w-11 h-11 bg-brand-600/15 rounded-xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8"  y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-semibold text-white mb-1.5">Cajero / Recepcionista</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Confirmás señas, gestionás reservas y cerrás la caja del día en minutos.
+            Sin papeles, sin cuadernos, sin margen para el error.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-3">
+        <div class="w-11 h-11 bg-brand-600/15 rounded-xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07M8.46 8.46a5 5 0 0 0 0 7.07"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-semibold text-white mb-1.5">Próximamente: IA por WhatsApp</h3>
+          <p class="text-sm text-gray-400 leading-relaxed">
+            Un asistente que toma reservas automáticamente por WhatsApp, las 24 horas.
+            Sin intervención humana, sin perder un solo turno.
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FORMULARIO DE CONTACTO (visual)
+════════════════════════════════════════════════════════ -->
+<section id="contacto" class="section-green py-20 px-4 sm:px-6">
+  <div class="max-w-xl mx-auto">
+
+    <div class="text-center mb-10">
+      <h2 class="text-3xl sm:text-4xl font-bold text-white mb-3">¿Querés sumarte?</h2>
+      <p class="text-gray-400">
+        Dejanos tus datos y te contactamos en menos de 24&nbsp;hs.
+      </p>
+    </div>
+
+    <form class="bg-gray-900 border border-gray-800 rounded-2xl p-8 space-y-4"
+          onsubmit="handleContactForm(event)">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5">Nombre</label>
+          <input type="text" placeholder="Tu nombre" class="form-input" />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5">Teléfono</label>
+          <input type="tel" placeholder="+54 9 11 ..." class="form-input" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
+        <input type="email" placeholder="tu@email.com" class="form-input" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-1.5">Nombre del complejo</label>
+        <input type="text" placeholder="Ej: Complejo Los Pinos" class="form-input" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-400 mb-1.5">Tipo de canchas</label>
+        <select class="form-input" style="cursor:pointer">
+          <option value="" disabled selected style="background:#111827">Seleccioná...</option>
+          <option style="background:#111827">Fútbol 5</option>
+          <option style="background:#111827">Fútbol 7</option>
+          <option style="background:#111827">Pádel</option>
+          <option style="background:#111827">Mixto (varios tipos)</option>
+        </select>
+      </div>
+
+      <button type="submit" id="form-btn"
+              class="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold
+                     py-3 rounded-xl transition-colors duration-150 text-sm mt-2">
+        Quiero conocer más
+      </button>
+
+      <p id="form-success" class="hidden text-center text-sm text-brand-400 pt-1">
+        ✓ ¡Gracias! Te contactamos pronto.
+      </p>
+
+    </form>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     CTA FINAL
+════════════════════════════════════════════════════════ -->
+<section class="section-cta py-20 px-4 sm:px-6">
+  <div class="max-w-2xl mx-auto text-center">
+    <h2 class="text-3xl sm:text-4xl font-bold text-white mb-4">
+      Listo para probarlo
+    </h2>
+    <p class="text-gray-400 mb-8 text-lg">
+      Ingresá al panel y empezá a gestionar tu complejo. Las canchas te esperan.
+    </p>
+    <a href="http://localhost:5173/login" class="btn-login-hero" style="font-size:1.1rem; padding: 1.1rem 2.6rem;">
+      <span class="btn-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h8"/>
+          <polyline points="17 15 21 12 17 9"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </span>
+      Ingresar
+    </a>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════ -->
+<footer class="border-t border-gray-800/60 py-8 px-4 sm:px-6">
+  <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between
+              gap-3 text-sm text-gray-600">
+    <div class="flex items-center gap-2">
+      <div class="w-5 h-5 bg-brand-600 rounded flex items-center justify-center">
+        <span class="text-white font-bold text-xs select-none">C</span>
+      </div>
+      <span class="font-semibold text-gray-500">CANCHERO!</span>
+    </div>
+    <p>Proyecto académico · Programación 3 · 2026</p>
+    <p>Fútbol 5 · Fútbol 7 · Pádel</p>
+  </div>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════════
+     JAVASCRIPT — Carrusel + Formulario
+════════════════════════════════════════════════════════ -->
+<script>
+  /* ── Carrusel ── */
+  const carousel = (() => {
+    const TOTAL  = 3;
+    const DELAY  = 3800;
+    let current  = 0;
+    let timer    = null;
+    const track  = document.getElementById('carousel-track');
+    const dots   = document.querySelectorAll('.dot');
+
+    function updateDots() {
+      dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    }
+
+    function go(page) {
+      current = ((page % TOTAL) + TOTAL) % TOTAL;
+      track.style.transform = `translateX(-${current * 33.333}%)`;
+      updateDots();
+    }
+
+    function next() { go(current + 1); }
+    function prev() { go(current - 1); }
+
+    function start() {
+      clearInterval(timer);
+      timer = setInterval(next, DELAY);
+    }
+
+    function pause() { clearInterval(timer); }
+
+    /* Pausa al hacer hover sobre el carrusel */
+    const wrapper = document.getElementById('carousel-wrapper');
+    wrapper.addEventListener('mouseenter', pause);
+    wrapper.addEventListener('mouseleave', start);
+
+    /* Soporte swipe en mobile */
+    let touchStartX = 0;
+    wrapper.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    wrapper.addEventListener('touchend', e => {
+      const delta = touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(delta) > 50) delta > 0 ? next() : prev();
+    });
+
+    start();
+
+    return { go, next, prev };
+  })();
+
+  /* ── Formulario visual ── */
+  function handleContactForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('form-btn');
+    const msg = document.getElementById('form-success');
+    btn.textContent = 'Enviando...';
+    btn.disabled = true;
+    setTimeout(() => {
+      btn.classList.add('hidden');
+      msg.classList.remove('hidden');
+    }, 900);
+  }
+</script>
+
+</body>
+</html>
