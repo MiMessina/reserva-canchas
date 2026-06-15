@@ -44,8 +44,14 @@ export function clearTokens(): void {
 
 // ─── Instancia Axios (autenticada) ───────────────────────────────────────────
 
+// Deriva el hostname del browser para que funcione con cualquier tenant.
+// Ej: lospinos.localhost:5173 → lospinos.localhost:8000/api
+const _baseUrl = new URL(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api')
+_baseUrl.hostname = window.location.hostname
+const apiBaseUrl = _baseUrl.toString().replace(/\/$/, '')
+
 const apiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -58,7 +64,7 @@ const apiClient: AxiosInstance = axios.create({
 // aunque el usuario esté logueado, para que el backend trate la request como
 // invitado (guest_name + guest_phone) y no rechace por el XOR de ADR-008.
 export const publicApiClient: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -138,7 +144,7 @@ apiClient.interceptors.response.use(
 
     try {
       const { data } = await axios.post<RefreshResponse>(
-        `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api'}/auth/refresh/`,
+        `${apiBaseUrl}/auth/refresh/`,
         { refresh },
         { headers: { 'Content-Type': 'application/json' } },
       )
