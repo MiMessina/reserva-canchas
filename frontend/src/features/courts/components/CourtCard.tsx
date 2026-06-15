@@ -6,7 +6,7 @@
  * Acciones: editar, desactivar — solo para tenant_admin.
  */
 
-import { Pencil, PowerOff, Power, MapPin } from 'lucide-react'
+import { Pencil, PowerOff, Power, MapPin, CalendarDays } from 'lucide-react'
 import { COURT_TYPE_LABELS } from '../types'
 import type { Court } from '../types'
 
@@ -108,6 +108,16 @@ export function CourtCard({
           >
             <Pencil size={14} aria-hidden="true" />
             Editar
+          </button>
+          <div className="w-px bg-gray-100 dark:bg-gray-700" aria-hidden="true" />
+          <button
+            type="button"
+            aria-label={`Ver horarios de cancha ${court.name}`}
+            onClick={() => onViewDetail(court)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-brand-600 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <CalendarDays size={14} aria-hidden="true" />
+            Horarios
           </button>
           <div className="w-px bg-gray-100 dark:bg-gray-700" aria-hidden="true" />
           <button
