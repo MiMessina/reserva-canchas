@@ -123,7 +123,7 @@ Esto hace automaticamente:
 4. Ejecuta `migrate_schemas` (esquema `demo`: Users, Courts, Bookings, Cashbox).
 5. Crea el tenant de prueba `demo` con su dominio `demo.localhost` (idempotente).
 6. Arranca el backend Django en `http://localhost:8000` (modo dev con runserver).
-7. Arranca el frontend Vite en `http://localhost:5173` (con hot reload).
+7. Arranca el frontend Vite en `http://demo.localhost:5173` (con hot reload).
 
 ### Paso 3 — Configurar el tenant demo en Windows (unico paso manual)
 
@@ -146,7 +146,7 @@ Una vez que `docker compose up` termina de inicializar:
 | **Landing page** | `http://localhost:3000` | Página pública de presentación de CANCHERO! |
 | Backend healthcheck | `http://localhost:8000/api/health/` | Devuelve `{"status": "ok"}` |
 | Swagger UI | `http://localhost:8000/api/docs/` | Documentacion interactiva de la API |
-| Frontend | `http://localhost:5173` | App React (dev server con hot reload) |
+| Frontend | `http://demo.localhost:5173` | App React (dev server con hot reload) |
 | Login API | `POST http://demo.localhost:8000/api/auth/login/` | JWT con usuario del tenant demo |
 
 ### Credenciales del tenant demo (desarrollo)
@@ -268,7 +268,7 @@ No necesitás instalar el bot para desarrollar el visor. Un management command i
 docker compose exec backend python manage.py seed_bot_demo
 ```
 
-Abrí el panel admin en `http://localhost:5173` → pestaña "Asistente". Vas a ver 3 conversaciones de prueba con mensajes realistas: reserva confirmada, cancelación y consulta de disponibilidad.
+Abrí el panel admin en `http://demo.localhost:5173` → pestaña "Asistente". Vas a ver 3 conversaciones de prueba con mensajes realistas: reserva confirmada, cancelación y consulta de disponibilidad.
 
 Para limpiar los datos de prueba: usá el botón 🗑️ en el visor, o corré `seed_bot_demo --clear`.
 
