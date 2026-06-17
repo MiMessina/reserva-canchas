@@ -160,3 +160,27 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+# ---------------------------------------------------------------------------
+# Serializers de password reset (Sprint 3 — flujo sin sesión activa)
+# ---------------------------------------------------------------------------
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    Valida el cuerpo de POST /api/auth/password-reset/.
+    Solo requiere el email del usuario.
+    """
+
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    Valida el cuerpo de POST /api/auth/password-reset/confirm/.
+    Recibe uid (base64 del pk) + token firmado + nueva contraseña.
+    """
+
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=8, write_only=True)

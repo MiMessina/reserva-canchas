@@ -11,6 +11,10 @@ Endpoints de Sprint 0:
 FIX R-08: /api/auth/login/ usa EmailTokenObtainPairView (email como identificador,
 no username). Contrato: POST {"email": "...", "password": "..."} → {access, refresh}.
 
+Endpoints de password reset (Sprint 3):
+  POST /api/auth/password-reset/         — solicitar link de reset (AllowAny)
+  POST /api/auth/password-reset/confirm/ — confirmar con uid+token (AllowAny)
+
 Endpoints de configuración del complejo:
   GET  /api/settings/   — configuración pública del complejo (AllowAny, acotada al tenant)
   PATCH /api/settings/  — actualizar configuración (solo tenant_admin)
@@ -45,7 +49,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.tenants.views import HealthCheckView
-from apps.users.views import EmailTokenObtainPairView
+from apps.users.views import (
+    EmailTokenObtainPairView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
+)
 
 urlpatterns = [
     # Admin de Django (esquema public: gestión de tenants/dominios)
@@ -58,6 +66,10 @@ urlpatterns = [
     # EmailTokenObtainPairView acepta {"email", "password"} → {access, refresh}
     path("api/auth/login/", EmailTokenObtainPairView.as_view(), name="token-obtain-pair"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+
+    # Password reset (Sprint 3 — AllowAny, scoped al tenant por middleware)
+    path("api/auth/password-reset/", PasswordResetRequestView.as_view(), name="password-reset"),
+    path("api/auth/password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
 
     # Configuración del complejo (ComplexSettings) — singleton por tenant
     path("api/", include("apps.tenants.urls")),

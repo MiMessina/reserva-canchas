@@ -319,6 +319,11 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL", "CANCHERO! <noreply@canchero.com>"
 )
 
+# URL base del frontend (usada para construir links de reset de contraseña).
+# En desarrollo: http://localhost:5173
+# En producción: el dominio real del tenant (ej: https://demo.tudominio.com)
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")
+
 # ---------------------------------------------------------------------------
 # Logging básico
 # ---------------------------------------------------------------------------
