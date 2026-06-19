@@ -3,6 +3,10 @@
  * --------------------
  * Definicion central de rutas (React Router v6).
  *
+ * ROUTING CONDICIONAL POR HOSTNAME (ADR-013):
+ *   Si el hostname empieza con "platform.", se renderiza PlatformRoutes
+ *   (panel de System Admin). Caso contrario, se usan las rutas de tenant.
+ *
  * Rutas Sprint 0:
  *   /login        → LoginPage (publica)
  *   /             → DashboardPage (protegida) — redirige a /admin/courts
@@ -33,6 +37,7 @@
  */
 
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
+import { PlatformRoutes } from './PlatformRoutes'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
@@ -50,6 +55,12 @@ import { ChatDemoPage } from '@/features/agent/ChatDemoPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { MyBookingsPage } from '@/features/myBookings/MyBookingsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
+
+// ─── Routing condicional por hostname (ADR-013) ───────────────────────────────
+// Si el hostname empieza con "platform.", el panel de System Admin toma el control.
+// Las rutas de tenant no se cargan para ese hostname.
+
+const isPlatformAdmin = window.location.hostname.startsWith('platform.')
 
 const router = createBrowserRouter([
   {
@@ -138,5 +149,10 @@ const router = createBrowserRouter([
 ])
 
 export function AppRouter() {
+  // Si el hostname es platform.*, renderizar el panel de System Admin.
+  if (isPlatformAdmin) {
+    return <PlatformRoutes />
+  }
+
   return <RouterProvider router={router} />
 }

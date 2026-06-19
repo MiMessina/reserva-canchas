@@ -16,6 +16,7 @@ Reglas:
 - Fechas/horas en UTC (USE_TZ=True).
 """
 
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
 from django_tenants.models import DomainMixin, TenantMixin
 
@@ -73,6 +74,44 @@ class Domain(DomainMixin):
 
     def __str__(self):
         return self.domain
+
+
+class PlatformAdmin(models.Model):
+    """
+    Administrador del Panel de System Admin (ADR-013).
+
+    Vive en el esquema `public` (apps.tenants es SHARED_APPS).
+    Es independiente de users.User (TENANT_APPS) y de auth.User (swapped).
+    El login se verifica con check_password() sobre el hash almacenado.
+
+    JWT: RefreshToken.for_user() usa el pk como user_id. PlatformJWTAuthentication
+    lo busca aqui por pk.
+    """
+
+    email = models.EmailField(unique=True, verbose_name="Email")
+    password = models.CharField(max_length=128, verbose_name="Contrasena (hash)")
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Propiedades que esperan las vistas y el authentication backend
+    is_superuser = True
+    is_staff = True
+    is_authenticated = True
+    is_anonymous = False
+
+    class Meta:
+        verbose_name = "Administrador de plataforma"
+        verbose_name_plural = "Administradores de plataforma"
+
+    def __str__(self):
+        return f"PlatformAdmin({self.email})"
+
+    def set_password(self, raw_password):
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.password)
 
 
 class ComplexSettings(TimeStampedSoftDeleteModel):

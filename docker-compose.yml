@@ -63,6 +63,14 @@ services:
       # Monta el código fuente local: cualquier cambio se refleja sin rebuild
       # (útil para desarrollo; en producción quitar este volumen)
       - ./backend:/app
+    # extra_hosts: resuelve hostnames de tenant dentro del contenedor backend.
+    # Necesario para que el middleware de django-tenants reconozca las requests
+    # que llegan al contenedor con Host: demo.localhost o platform.localhost.
+    # host-gateway apunta automáticamente a la IP del host Docker (127.0.0.1 en Linux,
+    # o la IP del host en Docker Desktop para Windows/Mac).
+    extra_hosts:
+      - "demo.localhost:host-gateway"
+      - "platform.localhost:host-gateway"
     # El entrypoint.sh ya espera a Postgres, migra y crea el tenant demo.
     # No se necesita command adicional; el CMD lo define el entrypoint.sh
     # según DJANGO_DEBUG.

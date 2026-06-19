@@ -22,6 +22,8 @@ Uso (ejemplo de desarrollo — NO hardcodear la contraseña en scripts):
     de producción o en control de versiones (ver RULES.md §2 y entrypoint.sh).
 
 ADR-009: El alta de tenant en el MVP se hace por management command.
+ADR-013: La lógica de creación se extrajo a tenants/services.py para que el
+         Panel de System Admin la reutilice via API REST.
 ADR-007: El User (incluido el tenant_admin) vive en el esquema del tenant.
 FIX R-01: --admin-password es un parámetro de shell; la contraseña real proviene
            de la variable de entorno DEMO_ADMIN_PASSWORD (no de un valor hardcodeado).
@@ -29,6 +31,7 @@ FIX R-01: --admin-password es un parámetro de shell; la contraseña real provie
 Idempotencia:
     Si el schema_name ya existe, el comando avisa y sale sin error (no lanza
     excepción), para que los scripts de arranque puedan llamarlo sin romper.
+    Si el tenant existe pero el admin no, lo crea/actualiza (upsert).
 """
 
 import logging
@@ -37,7 +40,14 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django_tenants.utils import schema_context
 
-from apps.tenants.models import Domain, Tenant
+from apps.tenants.models import Tenant
+from apps.tenants.services import (
+    DomainAlreadyExists,
+    InvalidSchemaName,
+    SchemaAlreadyExists,
+    TenantCreationFailed,
+    create_tenant_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -119,21 +129,7 @@ class Command(BaseCommand):
         admin_email = options["admin_email"].strip()
         admin_password = options["admin_password"]
 
-        # Validaciones básicas de entrada
-        if not schema_name.isidentifier():
-            raise CommandError(
-                f"El schema '{schema_name}' no es un identificador válido. "
-                "Usá solo letras, números y guiones bajos."
-            )
-
         # --- Idempotencia: si el tenant ya existe, solo actualizar el admin ---
-        # Se separa la verificación en dos casos:
-        #   A) El registro del modelo Tenant existe → no recrear nada, pero sí
-        #      actualizar la contraseña del admin (para que el .env sea la fuente
-        #      de verdad en cada arranque del contenedor).
-        #   B) El registro no existe pero el schema PG puede existir (ej: rollback previo)
-        #      → recrear solo el registro Django; django-tenants usa auto_create_schema=True
-        #      pero si el schema ya existe en PG el CREATE SCHEMA IF NOT EXISTS es no-op.
         tenant_qs = Tenant.objects.filter(schema_name=schema_name)
         if tenant_qs.exists():
             self.stdout.write(
@@ -146,58 +142,23 @@ class Command(BaseCommand):
 
         self.stdout.write(f"Creando tenant '{name}' (schema: {schema_name})...")
 
-        # --- 1. Crear el Tenant (django-tenants crea el esquema automáticamente) ---
+        # Delegar al service (ADR-013: lógica centralizada en services.py)
         try:
-            tenant = Tenant(schema_name=schema_name, name=name)
-            tenant.save()  # auto_create_schema=True: crea el esquema al guardar
-        except Exception as exc:
-            raise CommandError(f"Error al crear el tenant: {exc}") from exc
-
-        self.stdout.write(f"  Esquema PostgreSQL '{schema_name}' creado (o ya existía).")
-
-        # --- 2. Crear el Domain ---
-        try:
-            if Domain.objects.filter(domain=domain_name).exists():
-                tenant.delete()
-                raise CommandError(
-                    f"El dominio '{domain_name}' ya está registrado en otro tenant. "
-                    "Usá un dominio diferente."
-                )
-
-            Domain.objects.create(
-                domain=domain_name,
-                tenant=tenant,
-                is_primary=True,
-            )
-        except CommandError:
-            raise
-        except Exception as exc:
-            tenant.delete()
-            raise CommandError(f"Error al crear el dominio: {exc}") from exc
-
-        self.stdout.write(f"  Dominio '{domain_name}' registrado.")
-
-        # --- 3. Ejecutar migraciones del esquema del tenant ---
-        self.stdout.write(f"  Ejecutando migraciones en el esquema '{schema_name}'...")
-        try:
-            from django.core.management import call_command
-            call_command(
-                "migrate_schemas",
+            tenant = create_tenant_service(
+                name=name,
                 schema_name=schema_name,
-                interactive=False,
-                verbosity=0,
+                domain=domain_name,
+                admin_email=admin_email,
+                admin_password=admin_password,
             )
+        except (InvalidSchemaName, SchemaAlreadyExists, DomainAlreadyExists, TenantCreationFailed) as exc:
+            raise CommandError(exc.message) from exc
         except Exception as exc:
-            raise CommandError(f"Error al migrar el esquema '{schema_name}': {exc}") from exc
-
-        self.stdout.write(f"  Migraciones del esquema '{schema_name}' completadas.")
-
-        # --- 4. Crear el usuario tenant_admin ---
-        self._upsert_admin(schema_name, admin_email, admin_password)
+            raise CommandError(f"Error inesperado al crear el tenant: {exc}") from exc
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"\nTenant '{name}' creado exitosamente.\n"
+                f"\nTenant '{tenant.name}' creado exitosamente.\n"
                 f"  Schema:  {schema_name}\n"
                 f"  Dominio: {domain_name}\n"
                 f"  Admin:   {admin_email}\n"
