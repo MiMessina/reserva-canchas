@@ -14,10 +14,7 @@ Los datos insertados son indistinguibles de los mensajes reales del bot.
 Para limpiarlos: botón de papelera en el visor, o --clear en este comando.
 """
 
-from datetime import timedelta
-
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 from django_tenants.utils import schema_context
 
 from apps.agent.models import BOT_DEMO_MARKER, BotConversationLog
@@ -154,31 +151,17 @@ class Command(BaseCommand):
                     )
                     return
 
-                now = timezone.now()
-                total = 0
+            from apps.agent.services import seed_demo_conversations
+            total = seed_demo_conversations(tenant_slug)
 
-                for conv in DEMO_CONVERSATIONS:
-                    base_time = now - timedelta(minutes=conv["minutes_ago"])
-                    phone = conv["phone"]
-                    player_name = conv["player_name"]
-                    booking_id = conv["booking_id"]
-
-                    for i, (direction, message) in enumerate(conv["messages"]):
-                        msg_time = base_time + timedelta(seconds=i * 30)
-                        is_last = i == len(conv["messages"]) - 1
-
-                        log = BotConversationLog.objects.create(
-                            phone=phone,
-                            player_name=player_name,
-                            direction=direction,
-                            message=f"{SEED_MARKER} {message}",
-                            booking_id=booking_id if direction == "outbound" and is_last else None,
-                        )
-                        # auto_now_add impide pasar created_at en create();
-                        # update() escribe directo en SQL sin pasar por el modelo.
-                        BotConversationLog.objects.filter(pk=log.pk).update(created_at=msg_time)
-                        total += 1
-
+            if total == 0:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"Ya existen conversaciones de demo en '{tenant_slug}'. "
+                        "Usá --clear para limpiarlas antes de reinsertar."
+                    )
+                )
+            else:
                 self.stdout.write(
                     self.style.SUCCESS(
                         f"✅ {total} mensajes insertados en {len(DEMO_CONVERSATIONS)} conversaciones "
