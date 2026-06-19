@@ -271,8 +271,7 @@ docker compose up --build
 
 El bot de WhatsApp es un proceso **Node.js independiente** ubicado en un repositorio aparte. El panel admin del proyecto (pestaña "Asistente") muestra en tiempo real las conversaciones que el bot tiene con los jugadores.
 
-> Repositorio del bot: [github.com/cn-10/CanchaYa_bot](https://github.com/cn-10/CanchaYa_bot)
-> ⚠️ **Pendiente de renombrar** a `canchero-bot` en GitHub como parte del rebranding (Sprint 8).
+> Repositorio del bot: [github.com/cn-10/canchero-bot](https://github.com/cn-10/canchero-bot)
 
 ### Opción A — Trabajar sin el bot (modo demo, recomendada)
 
@@ -283,7 +282,7 @@ No necesitás instalar el bot para desarrollar el visor. Un management command i
 docker compose exec backend python manage.py seed_bot_demo
 ```
 
-Abrí el panel admin en `http://demo.localhost:5173` → pestaña "Asistente". Vas a ver 3 conversaciones de prueba con mensajes realistas: reserva confirmada, cancelación y consulta de disponibilidad.
+Abrí el panel admin en `http://demo.localhost:5173` → pestaña "Asistente". Vas a ver 6 conversaciones de prueba con mensajes realistas: reserva confirmada, cancelación, consulta de disponibilidad, consulta de precio, reserva F7 con seña y turno ocupado con alternativa.
 
 Para limpiar los datos de prueba: usá el botón 🗑️ en el visor, o corré `seed_bot_demo --clear`.
 
