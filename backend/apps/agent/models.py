@@ -14,6 +14,10 @@ from django.db import models
 
 from apps.common.models import TimeStampedSoftDeleteModel
 
+# Prefijo que identifica mensajes insertados por seed_bot_demo (datos sintéticos).
+# Fuente única: views.py y seed_bot_demo.py lo importan desde aquí.
+BOT_DEMO_MARKER = "[DEMO]"
+
 
 class BotConversationLog(TimeStampedSoftDeleteModel):
     """

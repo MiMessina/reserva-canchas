@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django_tenants.utils import schema_context
 
-from apps.agent.models import BotConversationLog
+from apps.agent.models import BOT_DEMO_MARKER, BotConversationLog
 
 # ---------------------------------------------------------------------------
 # Datos de demo
@@ -73,7 +73,7 @@ DEMO_CONVERSATIONS = [
     },
 ]
 
-SEED_MARKER = "[DEMO]"
+SEED_MARKER = BOT_DEMO_MARKER
 
 
 class Command(BaseCommand):
