@@ -11,6 +11,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { LogIn } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import { Button } from '@/components/Button'
 import { ErrorState } from '@/components/ErrorState'
@@ -152,6 +153,16 @@ export function LoginPage() {
               Ingresar
             </Button>
           </form>
+
+          {/* Link recuperar contraseña */}
+          <div className="mt-5 text-center">
+            <Link
+              to="/forgot-password"
+              className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
         </div>
       </div>
     </div>

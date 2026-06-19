@@ -22,6 +22,10 @@
  *   /admin/reports      → ReportsPage (reportes semanales — operator/admin)
  *   /admin/settings     → SettingsPage (configuracion del complejo — tenant_admin)
  *
+ * Rutas de recuperación de contraseña (publicas — sin JWT):
+ *   /forgot-password              → ForgotPasswordPage
+ *   /reset-password/:uid/:token   → ResetPasswordPage
+ *
  * Layout:
  *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
  *   AdminLayout (navbar + Outlet). Las rutas /booking y /mis-reservas son
@@ -30,6 +34,8 @@
 
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminLayout } from '@/components/AdminLayout'
 import { DashboardPage } from '@/app/DashboardPage'
@@ -61,6 +67,16 @@ const router = createBrowserRouter([
     // Ruta publica: consulta de reservas por telefono (sin auth)
     path: '/mis-reservas',
     element: <MyBookingsPage />,
+  },
+  {
+    // Ruta publica: solicitud de recuperacion de contraseña
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    // Ruta publica: confirmacion del reset de contraseña (link del email)
+    path: '/reset-password/:uid/:token',
+    element: <ResetPasswordPage />,
   },
   {
     // Rutas protegidas (requieren JWT)
