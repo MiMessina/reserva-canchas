@@ -7,6 +7,7 @@ Decisiones de arquitectura aplicadas:
   ADR-007: Custom User en TENANT_APPS (usuarios aislados por complejo).
   ADR-009: Alta de tenant por management command (sin panel en MVP).
   ADR-010: CORS con django-cors-headers (frontend ↔ backend, orígenes por entorno).
+  ADR-013: Panel web de System Admin — PUBLIC_SCHEMA_URLCONF para endpoints /api/platform/.
 
 Reglas inviolables:
   - TIME_ZONE = 'UTC', USE_TZ = True (fechas nunca en hora local).
@@ -37,7 +38,10 @@ if not SECRET_KEY:
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS_RAW = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,demo.localhost")
+ALLOWED_HOSTS_RAW = os.environ.get(
+    "DJANGO_ALLOWED_HOSTS",
+    "localhost,127.0.0.1,demo.localhost,platform.localhost",  # ADR-013: platform.localhost
+)
 ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_RAW.split(",") if h.strip()]
 
 # ---------------------------------------------------------------------------
@@ -156,6 +160,20 @@ MIDDLEWARE = [
 # ---------------------------------------------------------------------------
 ROOT_URLCONF = "config.urls"
 
+# PUBLIC_SCHEMA_URLCONF (ADR-013):
+# django-tenants usa este urlconf cuando el host resuelve al tenant `public`
+# (ej: localhost, platform.localhost). Aquí viven los endpoints de /api/platform/.
+# Los endpoints de tenant (canchas, reservas, caja) solo responden desde
+# hostnames que no sean el esquema public.
+PUBLIC_SCHEMA_URLCONF = "config.urls_public"
+
+# SHOW_PUBLIC_IF_NO_TENANT_FOUND (django-tenants 3.6.1):
+# Cuando ningún tenant coincide con el hostname, rutear al schema public
+# usando PUBLIC_SCHEMA_URLCONF en lugar de lanzar Http404.
+# Necesario para que platform.localhost (sin tenant registrado) llegue a
+# los endpoints de /api/platform/.
+SHOW_PUBLIC_IF_NO_TENANT_FOUND = True
+
 # ---------------------------------------------------------------------------
 # Templates
 # ---------------------------------------------------------------------------
@@ -204,7 +222,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ---------------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        # TenantJWTAuthentication rechaza tokens con iss='platform' (ADR-013).
+        # Garantiza aislamiento: tokens de system_admin no válidos en endpoints de tenant.
+        "apps.users.authentication.TenantJWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         # Por defecto todos los endpoints requieren autenticación.
@@ -227,6 +247,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/minute",
         "user": "300/minute",
+        "platform_login": "5/minute",  # ALTA 3: protege el login del system_admin
     },
 }
 
@@ -257,13 +278,18 @@ SIMPLE_JWT = {
 # CORS — django-cors-headers (ADR-010)
 #
 # CORS_ALLOWED_ORIGINS se lee de la variable de entorno DJANGO_CORS_ALLOWED_ORIGINS,
-# separada por comas. Default de desarrollo: el servidor de Vite en localhost:5173.
+# separada por comas.
+#
+# Default de desarrollo incluye:
+#   - http://localhost:5173         — frontend del complejo (Vite)
+#   - http://platform.localhost:5173 — Panel de System Admin (ADR-013)
 #
 # NUNCA usar CORS_ALLOW_ALL_ORIGINS=True (ver ADR-010).
-# En producción la variable debe contener únicamente el dominio real del complejo.
+# En producción la variable debe contener únicamente los dominios reales.
 # ---------------------------------------------------------------------------
 _cors_origins_raw = os.environ.get(
-    "DJANGO_CORS_ALLOWED_ORIGINS", "http://localhost:5173"
+    "DJANGO_CORS_ALLOWED_ORIGINS",
+    "http://localhost:5173,http://platform.localhost:5173",
 )
 CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
 
@@ -286,6 +312,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "courts", "description": "ABM de canchas y horarios"},
         {"name": "bookings", "description": "Motor de reservas"},
         {"name": "cashbox", "description": "Caja diaria"},
+        {"name": "platform", "description": "Panel de System Admin — gestión de tenants (ADR-013)"},
     ],
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,

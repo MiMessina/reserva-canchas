@@ -143,3 +143,58 @@ class TestJWTAuth(TenantTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertIn("access", response.json())
+
+    def test_login_fails_when_tenant_is_inactive(self):
+        """
+        Login de un usuario válido falla con 401 y código TENANT_INACTIVE
+        cuando el tenant está desactivado (is_active=False).
+
+        Verifica la regla de negocio: un tenant inactivo no permite login
+        de sus usuarios (aunque el user.is_active sea True).
+        """
+        from apps.tenants.models import Tenant
+        from django.db import connection
+
+        # Desactivar el tenant activo del test
+        tenant = Tenant.objects.get(schema_name=connection.schema_name)
+        tenant.is_active = False
+        tenant.save(update_fields=["is_active"])
+
+        try:
+            response = self.client.post(
+                "/api/auth/login/",
+                {"email": "player@test.localhost", "password": "testpass123"},
+                content_type="application/json",
+            )
+            self.assertEqual(response.status_code, 401)
+            data = response.json()
+            # El error puede venir como {"detail": {...}} o directamente como el dict
+            # dependiendo de cómo SimpleJWT serializa AuthenticationFailed con un dict.
+            # Verificamos que el código TENANT_INACTIVE esté presente en la respuesta.
+            response_str = str(data)
+            self.assertIn("TENANT_INACTIVE", response_str)
+        finally:
+            # Restaurar el tenant activo para no romper otros tests
+            tenant.is_active = True
+            tenant.save(update_fields=["is_active"])
+
+    def test_login_succeeds_when_tenant_is_active(self):
+        """
+        Login de un usuario válido retorna 200 cuando el tenant está activo.
+
+        Verifica que la validación de tenant inactivo no bloquea el caso normal.
+        """
+        from apps.tenants.models import Tenant
+        from django.db import connection
+
+        # Confirmar que el tenant está activo (estado normal del test)
+        tenant = Tenant.objects.get(schema_name=connection.schema_name)
+        self.assertTrue(tenant.is_active, "El tenant debe estar activo para este test")
+
+        response = self.client.post(
+            "/api/auth/login/",
+            {"email": "player@test.localhost", "password": "testpass123"},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("access", response.json())

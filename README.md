@@ -125,17 +125,20 @@ Esto hace automaticamente:
 6. Arranca el backend Django en `http://localhost:8000` (modo dev con runserver).
 7. Arranca el frontend Vite en `http://demo.localhost:5173` (con hot reload).
 
-### Paso 3 — Configurar el tenant demo en Windows (unico paso manual)
+### Paso 3 — Configurar hostnames locales en Windows (unico paso manual)
 
-El tenant `demo` resuelve por subdominio. Agregar al archivo `hosts` de Windows
-(requiere abrir el Bloc de Notas como Administrador):
+Los tenants y el panel de system admin resuelven por subdominio. Agregar al archivo
+`hosts` de Windows (requiere abrir el Bloc de Notas como Administrador):
 
 ```
 # Archivo: C:\Windows\System32\drivers\etc\hosts
 127.0.0.1  demo.localhost
+127.0.0.1  platform.localhost
 ```
 
 En Linux/macOS: editar `/etc/hosts` con `sudo`.
+
+Agregar una nueva linea por cada tenant adicional que se cree (ej: `127.0.0.1 complejo2.localhost`).
 
 ### Verificacion
 
@@ -148,6 +151,7 @@ Una vez que `docker compose up` termina de inicializar:
 | Swagger UI | `http://localhost:8000/api/docs/` | Documentacion interactiva de la API |
 | Frontend | `http://demo.localhost:5173` | App React (dev server con hot reload) |
 | Login API | `POST http://demo.localhost:8000/api/auth/login/` | JWT con usuario del tenant demo |
+| **Panel System Admin** | `http://platform.localhost:5173` | Panel interno del equipo (rol system_admin) |
 
 ### Credenciales del tenant demo (desarrollo)
 
@@ -230,8 +234,8 @@ docker compose down -v
 | Puerto | Servicio | Notas |
 |---|---|---|
 | `3000` | Landing page | HTML estático servido por Nginx Alpine |
-| `8000` | Backend Django | API REST + Swagger |
-| `5173` | Frontend Vite | Dev server con hot reload |
+| `8000` | Backend Django | API REST + Swagger. Accesible en `localhost:8000`, `demo.localhost:8000` y `platform.localhost:8000` |
+| `5173` | Frontend Vite | Dev server con hot reload. El hostname determina el tenant activo (`demo.localhost:5173`, `platform.localhost:5173`) |
 | `5432` | PostgreSQL | Solo para dev (DBeaver, TablePlus, etc.) — comentar en produccion |
 
 ### Variables de entorno requeridas

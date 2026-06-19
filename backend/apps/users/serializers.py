@@ -13,7 +13,9 @@ Serializers de escritura:
   UserUpdateSerializer — edita first_name, last_name, email, password (opcional).
 """
 
+from django.db import connection
 from rest_framework import serializers
+from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import User
@@ -39,6 +41,38 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
 
     # Al heredar de TokenObtainPairSerializer con USERNAME_FIELD="email",
     # el campo se llama automáticamente "email". No hace falta redefinirlo.
+
+    def validate(self, attrs):
+        """
+        Extiende la validación de SimpleJWT para rechazar login cuando el tenant
+        está inactivo (TENANT_INACTIVE).
+
+        SimpleJWT valida user.is_active pero no verifica el estado del tenant.
+        Este método agrega esa verificación después de que la autenticación del
+        usuario fue exitosa. Si el esquema activo corresponde a un tenant con
+        is_active=False, se lanza AuthenticationFailed con código TENANT_INACTIVE.
+
+        El bloque try/except captura el caso de esquema 'public' u otros contextos
+        donde el tenant no exista en la tabla; en esos casos no se bloquea.
+        """
+        data = super().validate(attrs)
+
+        from django_tenants.utils import get_tenant_model
+        TenantModel = get_tenant_model()
+        try:
+            tenant = TenantModel.objects.get(schema_name=connection.schema_name)
+            if not tenant.is_active:
+                raise AuthenticationFailed({
+                    "error": {
+                        "code": "TENANT_INACTIVE",
+                        "message": "Este complejo no está disponible en este momento.",
+                    }
+                })
+        except TenantModel.DoesNotExist:
+            # Esquema public u otro contexto sin tenant de negocio — no bloquear.
+            pass
+
+        return data
 
     @classmethod
     def get_token(cls, user):

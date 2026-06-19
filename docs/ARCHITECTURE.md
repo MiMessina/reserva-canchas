@@ -140,6 +140,7 @@ Las decisiones relevantes se registran como ADR (`templates/ADR_TEMPLATE.md`). E
 - **ADR-010:** `django-cors-headers` para la comunicación frontend ↔ backend (orígenes por entorno).
 - **ADR-011:** Modelo base abstracto (`TimeStampedSoftDeleteModel`) en `apps/common` para `is_active`/`created_at`/`updated_at` reutilizables por herencia.
 - **ADR-012:** Rebranding del producto de `CanchaYA` a `CANCHERO!` (cambio cosmético de naming; `CANCHERO!` en UI, `canchero` en identificadores técnicos).
+- **ADR-013:** Panel web de System Admin (supersede ADR-009): endpoints `/api/platform/` en `PUBLIC_SCHEMA_URLCONF`, JWT contra `auth.User` superuser, hostname `platform.*` dedicado.
 
 > Las ADR completas viven en `docs/adr/`.
 
