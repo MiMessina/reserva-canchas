@@ -32,6 +32,10 @@ class Tenant(TenantMixin):
     dentro de ese esquema y son completamente inaccesibles desde otros.
     """
 
+    class BotMode(models.TextChoices):
+        MOCK = "mock", "Demo (conversaciones seed)"
+        PRODUCTION = "production", "Producción (mensajes reales)"
+
     name = models.CharField(
         max_length=200,
         verbose_name="Nombre del complejo",
@@ -42,6 +46,16 @@ class Tenant(TenantMixin):
     is_active = models.BooleanField(
         default=True,
         help_text="Soft-delete: False deshabilita el complejo sin borrar datos.",
+    )
+    bot_mode = models.CharField(
+        max_length=20,
+        choices=BotMode.choices,
+        default=BotMode.PRODUCTION,
+        verbose_name="Modo del bot",
+        help_text=(
+            "mock: muestra conversaciones seed de demostración. "
+            "production: muestra mensajes reales del bot WhatsApp."
+        ),
     )
 
     # django-tenants usa esta flag para crear el esquema automáticamente

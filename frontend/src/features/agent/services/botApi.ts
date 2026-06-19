@@ -14,19 +14,19 @@
  */
 
 import apiClient from '@/lib/axios'
-import type { BotConversation } from '../types'
+import type { BotConversationsResponse } from '../types'
 
 /**
- * Obtiene la lista de conversaciones del bot para el tenant activo.
+ * Obtiene las conversaciones del bot para el tenant activo.
  * @param phone - Filtro opcional por número de teléfono (formato "5491112345678@c.us").
  */
 export async function fetchBotConversations(
   phone?: string,
-): Promise<BotConversation[]> {
+): Promise<BotConversationsResponse> {
   const params: Record<string, string> = {}
   if (phone) params.phone = phone
 
-  const { data } = await apiClient.get<BotConversation[]>(
+  const { data } = await apiClient.get<BotConversationsResponse>(
     '/bot/conversations/',
     { params },
   )

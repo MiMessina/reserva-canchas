@@ -7,18 +7,24 @@
  */
 
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, ToggleLeft, ToggleRight } from 'lucide-react'
-import { usePlatformTenant, useToggleTenant } from './hooks/usePlatformTenants'
+import { ArrowLeft, FlaskConical, Radio, ToggleLeft, ToggleRight } from 'lucide-react'
+import { usePlatformTenant, useToggleTenant, useUpdateTenant } from './hooks/usePlatformTenants'
 import { Button } from '@/components/Button'
 import { ErrorState } from '@/components/ErrorState'
 import { Spinner } from '@/components/Spinner'
 import { formatTenantDateTime } from './platformDateHelper'
+import type { BotMode } from './types'
 
 export function TenantDetailPage() {
   const { id } = useParams<{ id: string }>()
   const tenantId = Number(id)
   const { data: tenant, isLoading, isError, refetch } = usePlatformTenant(tenantId)
   const { mutate: toggleTenant, isPending: isToggling } = useToggleTenant()
+  const { mutate: updateTenant, isPending: isUpdatingBotMode } = useUpdateTenant()
+
+  function handleBotModeToggle(newMode: BotMode) {
+    updateTenant({ id: tenantId, payload: { bot_mode: newMode } })
+  }
 
   if (isLoading) {
     return (
@@ -85,10 +91,33 @@ export function TenantDetailPage() {
             label="Fecha de alta"
             value={formatTenantDateTime(tenant.created_at)}
           />
+          <Field
+            label="Modo del bot"
+            value={<BotModeBadge mode={tenant.bot_mode} />}
+          />
         </dl>
 
         {/* Acciones */}
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-3 sm:justify-end">
+          {/* Toggle bot_mode */}
+          <Button
+            variant="secondary"
+            isLoading={isUpdatingBotMode}
+            leftIcon={
+              tenant.bot_mode === 'mock' ? (
+                <Radio size={16} />
+              ) : (
+                <FlaskConical size={16} />
+              )
+            }
+            onClick={() =>
+              handleBotModeToggle(tenant.bot_mode === 'mock' ? 'production' : 'mock')
+            }
+          >
+            {tenant.bot_mode === 'mock' ? 'Pasar a Producción' : 'Pasar a Demo'}
+          </Button>
+
+          {/* Toggle is_active */}
           <Button
             variant={tenant.is_active ? 'danger' : 'secondary'}
             isLoading={isToggling}
@@ -146,6 +175,23 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
         aria-hidden="true"
       />
       {isActive ? 'Activo' : 'Inactivo'}
+    </span>
+  )
+}
+
+function BotModeBadge({ mode }: { mode: BotMode }) {
+  const isMock = mode === 'mock'
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium',
+        isMock
+          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+          : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      ].join(' ')}
+    >
+      {isMock ? <FlaskConical size={11} aria-hidden="true" /> : <Radio size={11} aria-hidden="true" />}
+      {isMock ? 'Demo (conversaciones seed)' : 'Producción (bot real)'}
     </span>
   )
 }

@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django_tenants.utils import schema_context
 
-from apps.agent.models import BotConversationLog
+from apps.agent.models import BOT_DEMO_MARKER, BotConversationLog
 
 # ---------------------------------------------------------------------------
 # Datos de demo
@@ -71,9 +71,56 @@ DEMO_CONVERSATIONS = [
         "booking_id": None,
         "minutes_ago": 90,
     },
+    # --- Conversaciones adicionales (T10-05) ---
+    {
+        "phone": "5491144445555@c.us",
+        "player_name": "Diego Fernández",
+        "messages": [
+            ("inbound",  "Buenas! cuánto sale reservar una cancha de fútbol?"),
+            ("outbound", "¡Hola, Diego! 👋\n\nLos precios actuales son:\n\n⚽ *Fútbol 5* — $15.000 / hora\n⚽ *Fútbol 7* — $20.000 / hora\n🎾 *Pádel* — $6.000 / 90 min\n\nLos turnos están disponibles de lunes a domingo de 8:00 a 23:00.\n\n¿Querés reservar alguno?"),
+            ("inbound",  "Y hay descuento para socios?"),
+            ("outbound", "Sí, los socios del complejo tienen un *10% de descuento* en todos los turnos.\n\nSi sos socio, indicámelo al reservar y el cajero aplica el descuento al confirmar la seña. 🙌\n\n¿Te anoto un turno?"),
+            ("inbound",  "No por ahora, gracias"),
+            ("outbound", "¡Perfecto! Cuando quieras reservar, escribime. ¡Hasta pronto! 👋"),
+        ],
+        "booking_id": None,
+        "minutes_ago": 130,
+    },
+    {
+        "phone": "5491133334444@c.us",
+        "player_name": "Camila Torres",
+        "messages": [
+            ("inbound",  "Hola quiero reservar fútbol 7 para el jueves a las 21hs"),
+            ("outbound", "¡Hola, Camila! 👋 El turno de *Fútbol 7 — Jueves 21:00* está disponible. 🎉\n\n¿A qué nombre reservamos?"),
+            ("inbound",  "Camila Torres"),
+            ("outbound", "📋 *Resumen de tu reserva:*\n\n⚽ Fútbol 7\n📅 Jueves\n🕐 21:00 – 22:00\n💰 $20.000\n👤 Camila Torres\n\n¿Confirmás? (Sí / No)"),
+            ("inbound",  "Sí. Cuánto tengo que transferir de seña?"),
+            ("outbound", "La seña mínima es el *50% del turno*: $10.000.\n\nPodés transferir más si querés abonar el total por adelantado. 💳\n\nDatos de pago:\nCBU: 0000003100012345678901\nAlias: CANCHERO.DEMO\nTitular: Complejo Demo\n\n✅ Tu reserva ya quedó registrada. El cajero la confirmará cuando reciba la transferencia."),
+            ("inbound",  "Listo, ya transferí"),
+            ("outbound", "¡Genial! En breve el cajero lo verifica y te confirma. ⚽\n\nCualquier duda, escribime. ¡Hasta el jueves!"),
+        ],
+        "booking_id": None,
+        "minutes_ago": 200,
+    },
+    {
+        "phone": "5491122223333@c.us",
+        "player_name": "Nicolás Suárez",
+        "messages": [
+            ("inbound",  "Hola, quiero reservar la cancha B de fútbol 5 para hoy a las 19hs"),
+            ("outbound", "¡Hola, Nicolás! Lamentablemente ese turno ya está ocupado 😅\n\n📍 *Cancha B — Fútbol 5 — Hoy 19:00* → ❌ No disponible\n\nPero tenemos libres:\n• *Cancha A* — 19:00 ✅\n• *Cancha B* — 20:00 ✅\n• *Cancha B* — 21:00 ✅\n\n¿Te queda bien alguno de esos?"),
+            ("inbound",  "dale cancha A a las 19"),
+            ("outbound", "Perfecto! *Cancha A — Hoy 19:00* 🎯\n\n¿A qué nombre hacemos la reserva?"),
+            ("inbound",  "Nico"),
+            ("outbound", "📋 *Resumen de tu reserva:*\n\n🏟️ Cancha A — Fútbol 5\n📅 Hoy\n🕐 19:00 – 20:00\n💰 $15.000\n👤 Nico\n\n¿Confirmás? (Sí / No)"),
+            ("inbound",  "sí"),
+            ("outbound", "✅ ¡Reserva confirmada!\n\nTe esperamos hoy a las 19:00 en Cancha A. ⚽\n\n💳 Transferí la seña a:\nCBU: 0000003100012345678901\nAlias: CANCHERO.DEMO"),
+        ],
+        "booking_id": None,
+        "minutes_ago": 270,
+    },
 ]
 
-SEED_MARKER = "[DEMO]"
+SEED_MARKER = BOT_DEMO_MARKER
 
 
 class Command(BaseCommand):

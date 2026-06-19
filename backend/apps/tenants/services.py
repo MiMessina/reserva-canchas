@@ -113,6 +113,7 @@ def create_tenant_service(
     domain: str,
     admin_email: str,
     admin_password: str,
+    bot_mode: str = "production",
 ) -> Tenant:
     """
     Crea un tenant completo: Tenant + Domain + migraciones del esquema + tenant_admin.
@@ -171,7 +172,7 @@ def create_tenant_service(
 
     # 3. Crear Tenant (django-tenants crea el esquema PG al hacer .save())
     try:
-        tenant = Tenant(schema_name=schema_name, name=name)
+        tenant = Tenant(schema_name=schema_name, name=name, bot_mode=bot_mode)
         tenant.save()
         logger.info("[create_tenant_service] Esquema '%s' creado.", schema_name)
     except Exception as exc:

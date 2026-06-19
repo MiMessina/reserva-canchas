@@ -16,11 +16,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.agent.models import BotConversationLog
+from apps.agent.models import BOT_DEMO_MARKER, BotConversationLog
 from apps.agent.serializers import (
     BotConversationSerializer,
     BotLogCreateSerializer,
 )
+from apps.tenants.selectors import get_bot_mode
 
 logger = logging.getLogger(__name__)
 
@@ -107,11 +108,19 @@ class BotConversationsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        bot_mode = get_bot_mode()
+
         qs = BotConversationLog.objects.filter(is_active=True).order_by("phone", "created_at")
 
         phone_filter = request.query_params.get("phone")
         if phone_filter:
             qs = qs.filter(phone=phone_filter)
+
+        # mock: solo mensajes seed [DEMO] | production: excluye seed
+        if bot_mode == "mock":
+            qs = qs.filter(message__startswith=BOT_DEMO_MARKER)
+        else:
+            qs = qs.exclude(message__startswith=BOT_DEMO_MARKER)
 
         # Agrupar en Python por phone (MVP: volumen bajo)
         conversations = []
@@ -140,7 +149,7 @@ class BotConversationsView(APIView):
         conversations.sort(key=lambda c: c["last_message_at"], reverse=True)
 
         serializer = BotConversationSerializer(conversations, many=True)
-        return Response(serializer.data)
+        return Response({"bot_mode": bot_mode, "conversations": serializer.data})
 
 
 class BotConversationDeleteView(APIView):

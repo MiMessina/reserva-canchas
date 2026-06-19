@@ -28,3 +28,10 @@ export interface BotConversation {
   last_message_at: string
   messages: BotMessage[]
 }
+
+/** Respuesta completa de GET /api/bot/conversations/ */
+export interface BotConversationsResponse {
+  /** mock: conversaciones seed [DEMO] | production: mensajes reales del bot. */
+  bot_mode: 'mock' | 'production'
+  conversations: BotConversation[]
+}

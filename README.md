@@ -101,13 +101,20 @@ cd reserva-canchas
 cp .env.example .env
 ```
 
-Editá `.env` y reemplazá los placeholders:
+Editá `.env` y completá las variables obligatorias:
 
 | Variable | Qué poner |
 |---|---|
 | `DJANGO_SECRET_KEY` | Una clave larga y aleatoria (ver comentario en `.env.example`) |
-| `POSTGRES_PASSWORD` | Una contrasena segura (no usar la del ejemplo en produccion) |
-| El resto | Los valores por defecto del `.env.example` funcionan para desarrollo local |
+| `POSTGRES_PASSWORD` | Una contraseña segura (no usar la del ejemplo en producción) |
+| `DEMO_ADMIN_PASSWORD` | **Obligatoria.** Contraseña del admin del tenant demo. El entrypoint falla si está vacía. |
+| `PLATFORM_ADMIN_PASSWORD` | **Obligatoria.** Contraseña del system admin. El entrypoint falla si está vacía. |
+| El resto | Los valores por defecto del `.env.example` funcionan para desarrollo local. |
+
+> **Si ya tenías el repo clonado y hiciste `git pull`:** comparás tu `.env` contra `.env.example`
+> para detectar variables nuevas que se hayan agregado en sprints recientes. En particular,
+> `PLATFORM_ADMIN_PASSWORD` se agregó en Sprint 4 (ADR-013); si tu `.env` es anterior a eso,
+> no la tiene y el backend no levanta.
 
 ### Paso 2 — Levantar todo con un comando
 
@@ -153,13 +160,17 @@ Una vez que `docker compose up` termina de inicializar:
 | Login API | `POST http://demo.localhost:8000/api/auth/login/` | JWT con usuario del tenant demo |
 | **Panel System Admin** | `http://platform.localhost:5173` | Panel interno del equipo (rol system_admin) |
 
-### Credenciales del tenant demo (desarrollo)
+### Credenciales de desarrollo
 
-El `entrypoint.sh` crea automaticamente:
+El `entrypoint.sh` crea automáticamente los usuarios al levantar, usando los valores del `.env`:
 
-- Email: `admin@demo.localhost`
-- Password: `adminpass123`
-- Dominio del tenant: `demo.localhost`
+**Tenant demo** (`demo.localhost`):
+- Email: valor de `DEMO_ADMIN_EMAIL` (default: `admin@demo.localhost`)
+- Password: valor de `DEMO_ADMIN_PASSWORD`
+
+**Panel System Admin** (`platform.localhost:5173`):
+- Email: valor de `PLATFORM_ADMIN_EMAIL` (default: `admin@platform.localhost`)
+- Password: valor de `PLATFORM_ADMIN_PASSWORD`
 
 Cambiar estas credenciales antes de cualquier despliegue real.
 

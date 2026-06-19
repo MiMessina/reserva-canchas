@@ -13,7 +13,7 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Building2 } from 'lucide-react'
+import { Building2, FlaskConical, Radio } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { Button } from '@/components/Button'
 import { ErrorState } from '@/components/ErrorState'
@@ -48,6 +48,7 @@ const createTenantSchema = z.object({
   admin_password: z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+  bot_mode: z.enum(['mock', 'production']).default('production'),
 })
 
 type CreateTenantFormValues = z.infer<typeof createTenantSchema>
@@ -67,11 +68,16 @@ export function TenantCreateModal({ isOpen, onClose }: TenantCreateModalProps) {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     reset: resetForm,
     formState: { errors },
   } = useForm<CreateTenantFormValues>({
     resolver: zodResolver(createTenantSchema),
+    defaultValues: { bot_mode: 'production' },
   })
+
+  const botMode = watch('bot_mode')
 
   // Limpiar form y estado de mutación al cerrar/abrir.
   useEffect(() => {
@@ -172,6 +178,55 @@ export function TenantCreateModal({ isOpen, onClose }: TenantCreateModalProps) {
             {errors.domain && (
               <p className="mt-1 text-xs text-red-600">{errors.domain.message}</p>
             )}
+          </div>
+
+          {/* Modo del bot */}
+          <div>
+            <p className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+              Modo inicial del bot
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  {
+                    value: 'production',
+                    label: 'Producción',
+                    description: 'Muestra mensajes reales del bot',
+                    icon: <Radio size={16} aria-hidden="true" />,
+                  },
+                  {
+                    value: 'mock',
+                    label: 'Demo',
+                    description: 'Muestra conversaciones de prueba',
+                    icon: <FlaskConical size={16} aria-hidden="true" />,
+                  },
+                ] as const
+              ).map((opt) => {
+                const selected = botMode === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setValue('bot_mode', opt.value)}
+                    className={[
+                      'flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors',
+                      selected
+                        ? 'border-gray-800 bg-gray-800 text-white dark:border-gray-300 dark:bg-gray-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200',
+                    ].join(' ')}
+                    aria-pressed={selected}
+                  >
+                    <span className="flex items-center gap-1.5 font-medium">
+                      {opt.icon}
+                      {opt.label}
+                    </span>
+                    <span className={['text-xs', selected ? 'text-gray-300' : 'text-gray-400'].join(' ')}>
+                      {opt.description}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Separador */}

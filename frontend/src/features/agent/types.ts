@@ -11,4 +11,4 @@
  *   import type { BotConversation, BotMessage } from './types'
  */
 
-export type { BotConversation, BotMessage } from './types/index'
+export type { BotConversation, BotConversationsResponse, BotMessage } from './types/index'
