@@ -210,6 +210,14 @@ def create_tenant_service(
                     schema_name,
                 )
 
+        # 7. Seed de conversaciones demo si el tenant nace en modo mock
+        if bot_mode == "mock":
+            from apps.agent.services import seed_demo_conversations
+            seed_demo_conversations(schema_name)
+            logger.info(
+                "[create_tenant_service] Seed demo insertado en esquema '%s'.", schema_name
+            )
+
     except Exception as exc:
         logger.error(
             "[create_tenant_service] Error tras crear el tenant, intentando rollback: %s",
