@@ -234,9 +234,21 @@ class TenantViewSet(viewsets.GenericViewSet):
     def partial_update(self, request, pk=None):
         from rest_framework.generics import get_object_or_404
         tenant = get_object_or_404(Tenant, pk=pk)
+        previous_bot_mode = tenant.bot_mode
         serializer = TenantUpdateSerializer(tenant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updated = serializer.save()
+
+        new_bot_mode = serializer.validated_data.get("bot_mode")
+        if new_bot_mode == "mock" and previous_bot_mode != "mock":
+            from apps.agent.services import seed_demo_conversations
+            try:
+                seed_demo_conversations(updated.schema_name)
+            except Exception:
+                logger.exception(
+                    "[partial_update] Fallo en seed de demo para '%s'", updated.schema_name
+                )
+
         logger.info(
             "[platform] platform.tenant_updated | admin=%s | tenant_id=%s | schema=%s",
             request.user.email,
