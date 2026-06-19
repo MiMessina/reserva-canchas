@@ -40,7 +40,7 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
 ALLOWED_HOSTS_RAW = os.environ.get(
     "DJANGO_ALLOWED_HOSTS",
-    "localhost,127.0.0.1,demo.localhost,platform.localhost",  # ADR-013: platform.localhost
+    "localhost,127.0.0.1,.localhost",  # .localhost cubre cualquier subdominio en dev
 )
 ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_RAW.split(",") if h.strip()]
 
@@ -280,18 +280,21 @@ SIMPLE_JWT = {
 # CORS_ALLOWED_ORIGINS se lee de la variable de entorno DJANGO_CORS_ALLOWED_ORIGINS,
 # separada por comas.
 #
-# Default de desarrollo incluye:
-#   - http://localhost:5173         — frontend del complejo (Vite)
-#   - http://platform.localhost:5173 — Panel de System Admin (ADR-013)
+# En DEBUG=True se activa CORS_ALLOW_ALL_ORIGINS para cubrir cualquier subdominio
+# .localhost nuevo sin necesidad de configuración manual (cualquier tenant creado
+# desde platform-admin queda accesible inmediatamente).
 #
-# NUNCA usar CORS_ALLOW_ALL_ORIGINS=True (ver ADR-010).
-# En producción la variable debe contener únicamente los dominios reales.
+# En producción (DEBUG=False) la variable debe contener únicamente los dominios
+# reales. NUNCA usar CORS_ALLOW_ALL_ORIGINS=True en producción (ADR-010).
 # ---------------------------------------------------------------------------
-_cors_origins_raw = os.environ.get(
-    "DJANGO_CORS_ALLOWED_ORIGINS",
-    "http://localhost:5173,http://platform.localhost:5173",
-)
-CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    _cors_origins_raw = os.environ.get(
+        "DJANGO_CORS_ALLOWED_ORIGINS",
+        "",
+    )
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
 
 # ---------------------------------------------------------------------------
 # drf-spectacular (Swagger / OpenAPI)

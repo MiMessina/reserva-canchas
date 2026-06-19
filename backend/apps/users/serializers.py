@@ -45,32 +45,22 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         """
         Extiende la validación de SimpleJWT para rechazar login cuando el tenant
-        está inactivo (TENANT_INACTIVE).
-
-        SimpleJWT valida user.is_active pero no verifica el estado del tenant.
-        Este método agrega esa verificación después de que la autenticación del
-        usuario fue exitosa. Si el esquema activo corresponde a un tenant con
-        is_active=False, se lanza AuthenticationFailed con código TENANT_INACTIVE.
-
-        El bloque try/except captura el caso de esquema 'public' u otros contextos
-        donde el tenant no exista en la tabla; en esos casos no se bloquea.
+        está inactivo (TENANT_INACTIVE). Usa connection.tenant (seteado por
+        TenantMainMiddleware desde public) para evitar la tabla fantasma que
+        django-tenants crea en cada schema tenant.
         """
         data = super().validate(attrs)
 
-        from django_tenants.utils import get_tenant_model
-        TenantModel = get_tenant_model()
-        try:
-            tenant = TenantModel.objects.get(schema_name=connection.schema_name)
-            if not tenant.is_active:
-                raise AuthenticationFailed({
-                    "error": {
-                        "code": "TENANT_INACTIVE",
-                        "message": "Este complejo no está disponible en este momento.",
-                    }
-                })
-        except TenantModel.DoesNotExist:
-            # Esquema public u otro contexto sin tenant de negocio — no bloquear.
-            pass
+        # connection.tenant lo setea TenantMainMiddleware desde public (siempre
+        # refleja el valor real, sin caer en la tabla fantasma de cada schema).
+        tenant = getattr(connection, 'tenant', None)
+        if tenant is not None and not tenant.is_active:
+            raise AuthenticationFailed({
+                "error": {
+                    "code": "TENANT_INACTIVE",
+                    "message": "Este complejo no está disponible en este momento.",
+                }
+            })
 
         return data
 
