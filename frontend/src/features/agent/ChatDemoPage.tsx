@@ -23,7 +23,7 @@
  */
 
 import { useState } from 'react'
-import { AlertTriangle, ChevronLeft, RefreshCw } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, FlaskConical, RefreshCw } from 'lucide-react'
 import { ConversationList } from './components/ConversationList'
 import { ConversationDetail } from './components/ConversationDetail'
 import { useBotConversations } from './hooks/useBotConversations'
@@ -31,7 +31,7 @@ import { useBotConversations } from './hooks/useBotConversations'
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 export function ChatDemoPage() {
-  const { conversations, isLoading, isError, refetch } = useBotConversations()
+  const { conversations, botMode, isLoading, isError, refetch } = useBotConversations()
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null)
 
   // Conversación actualmente seleccionada (o null si no hay ninguna)
@@ -43,6 +43,20 @@ export function ChatDemoPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] md:h-[calc(100vh-4rem)] overflow-hidden bg-[#0b141a]">
+
+      {/* Badge Modo Demo */}
+      {botMode === 'mock' && (
+        <div
+          role="status"
+          aria-label="Modo demostración activo"
+          className="flex items-center gap-2 px-4 py-2 text-xs font-medium bg-amber-500/15 border-b border-amber-500/30 text-amber-300 shrink-0"
+        >
+          <FlaskConical size={13} className="shrink-0" aria-hidden="true" />
+          <span>
+            <strong className="font-semibold">Modo Demo</strong> — Mostrando conversaciones de prueba. Activá el modo Producción desde el panel de System Admin para ver mensajes reales.
+          </span>
+        </div>
+      )}
 
       {/* Banner de error */}
       {isError && (

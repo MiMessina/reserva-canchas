@@ -10,13 +10,15 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { fetchBotConversations } from '../services/botApi'
-import type { BotConversation } from '../types'
+import type { BotConversation, BotConversationsResponse } from '../types'
 
 /** Intervalo de polling en milisegundos. */
 const POLL_INTERVAL_MS = 5_000
 
 export interface UseBotConversationsReturn {
   conversations: BotConversation[]
+  /** 'mock' = mostrando conversaciones seed | 'production' = mensajes reales. */
+  botMode: 'mock' | 'production'
   isLoading: boolean
   isError: boolean
   /** Refresca manualmente la lista (útil para un botón "actualizar"). */
@@ -24,16 +26,17 @@ export interface UseBotConversationsReturn {
 }
 
 export function useBotConversations(): UseBotConversationsReturn {
-  const { data, isLoading, isError, refetch } = useQuery<BotConversation[]>({
+  const { data, isLoading, isError, refetch } = useQuery<BotConversationsResponse>({
     queryKey: ['bot-conversations'],
     queryFn: () => fetchBotConversations(),
     refetchInterval: POLL_INTERVAL_MS,
     // Mantener los datos anteriores visibles mientras se refresca (evita parpadeos).
-    placeholderData: (previousData) => previousData,
+    placeholderData: (previousData: BotConversationsResponse | undefined) => previousData,
   })
 
   return {
-    conversations: data ?? [],
+    conversations: data?.conversations ?? [],
+    botMode: data?.bot_mode ?? 'production',
     isLoading,
     isError,
     refetch,
