@@ -7,7 +7,7 @@
  */
 
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, FlaskConical, Radio, ToggleLeft, ToggleRight } from 'lucide-react'
+import { ArrowLeft, ExternalLink, FlaskConical, Radio, ToggleLeft, ToggleRight } from 'lucide-react'
 import { usePlatformTenant, useToggleTenant, useUpdateTenant } from './hooks/usePlatformTenants'
 import { Button } from '@/components/Button'
 import { ErrorState } from '@/components/ErrorState'
@@ -80,7 +80,20 @@ export function TenantDetailPage() {
               </code>
             }
           />
-          <Field label="Dominio" value={tenant.domain} />
+          <Field
+            label="Dominio"
+            value={
+              <a
+                href={`${window.location.protocol}//${tenant.domain}${window.location.port ? ':' + window.location.port : ''}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1 hover:underline"
+              >
+                {tenant.domain}
+                <ExternalLink size={12} className="shrink-0" aria-hidden="true" />
+              </a>
+            }
+          />
           <Field
             label="Estado"
             value={
