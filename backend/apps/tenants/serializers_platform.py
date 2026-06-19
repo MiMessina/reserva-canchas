@@ -9,7 +9,7 @@ Regla (RULES.md §1): los serializers validan estructura, NO gobiernan negocio.
 Serializers:
   TenantListSerializer   — lectura (list/retrieve)
   TenantCreateSerializer — escritura (create)
-  TenantUpdateSerializer — escritura parcial (partial_update, solo name)
+  TenantUpdateSerializer — escritura parcial (partial_update: name, bot_mode)
 """
 
 import re
@@ -46,7 +46,7 @@ class TenantListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tenant
-        fields = ["id", "name", "schema_name", "domain", "is_active", "created_at"]
+        fields = ["id", "name", "schema_name", "domain", "is_active", "bot_mode", "created_at"]
         read_only_fields = ["id", "schema_name", "domain", "created_at"]
 
     def get_domain(self, obj) -> str:
@@ -121,10 +121,12 @@ class TenantUpdateSerializer(serializers.ModelSerializer):
     """
     Serializer de actualización parcial de Tenant.
 
-    Solo permite editar `name`. El schema_name y domain son inmutables
+    Permite editar `name` y `bot_mode`. El schema_name y domain son inmutables
     una vez creado el tenant (ADR-013 §Reglas de negocio).
     """
 
+    bot_mode = serializers.ChoiceField(choices=Tenant.BotMode.choices, required=False)
+
     class Meta:
         model = Tenant
-        fields = ["name"]
+        fields = ["name", "bot_mode"]
