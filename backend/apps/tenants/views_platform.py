@@ -173,6 +173,7 @@ class TenantViewSet(viewsets.GenericViewSet):
                 domain=vd["domain"],
                 admin_email=vd["admin_email"],
                 admin_password=vd["admin_password"],
+                bot_mode=vd.get("bot_mode", "production"),
             )
         except (InvalidSchemaName, SchemaAlreadyExists, DomainAlreadyExists) as exc:
             return Response(

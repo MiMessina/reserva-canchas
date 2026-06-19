@@ -78,6 +78,12 @@ class TenantCreateSerializer(serializers.Serializer):
         write_only=True,
         style={"input_type": "password"},
     )
+    bot_mode = serializers.ChoiceField(
+        choices=Tenant.BotMode.choices,
+        default=Tenant.BotMode.PRODUCTION,
+        required=False,
+        help_text="Modo inicial del visor del bot. mock=conversaciones seed, production=mensajes reales.",
+    )
 
     def validate_schema_name(self, value: str) -> str:
         value = value.lower().strip()
