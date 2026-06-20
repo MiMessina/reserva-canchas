@@ -274,13 +274,70 @@ docker compose up --build
 
 ---
 
-## Login Centralizado (Sprint 14)
+## Acceso al sistema — tres puertas de entrada
+
+El sistema tiene **tres URLs de acceso distintas**, cada una para un actor diferente. Es importante no confundirlas: usan modelos de usuario, flujos de autenticación y JWTs completamente separados.
+
+| URL | Para quién | Qué es |
+|-----|-----------|--------|
+| `http://app.localhost:5173/login` | Dueños y operadores de complejos | Login centralizado — Sprint 14 |
+| `http://platform.localhost:5173` | El equipo de CANCHERO! | Panel de administración del SaaS |
+| `http://<tenant>.localhost:5173` | Dueños y operadores (acceso directo) | Panel del complejo específico |
+
+---
+
+## Panel de System Admin (`platform.localhost`)
 
 ### Qué es
 
-Un único punto de entrada para que operadores y admins de cualquier complejo inicien sesión
-sin necesidad de conocer la URL de su subdominio. En lugar de ir a `demo.localhost:5173/login`,
-el usuario va siempre a **`app.localhost:5173/login`**.
+El panel de system admin es la herramienta **interna del equipo de CANCHERO!** para operar el SaaS. Desde acá se dan de alta los complejos (tenants), se activan o desactivan, y se configura el modo del bot.
+
+**No es accesible para los dueños de complejos ni para los jugadores.** Es exclusivo del rol `system_admin` (el equipo).
+
+### Cómo acceder
+
+```
+URL: http://platform.localhost:5173
+```
+
+Tiene su propia página de login en esa misma URL. Las credenciales se definen en el `.env`:
+
+```
+PLATFORM_ADMIN_EMAIL=admin@platform.localhost   (default)
+PLATFORM_ADMIN_PASSWORD=<definir en .env>       (obligatorio)
+```
+
+### Qué podés hacer
+
+- **Listar todos los complejos** (tenants) del SaaS con su dominio, estado y modo del bot.
+- **Crear un nuevo complejo:** define el nombre, el schema PostgreSQL, el dominio y las credenciales del admin inicial. El backend crea el esquema aislado automáticamente.
+- **Activar / desactivar un complejo:** un complejo inactivo no permite login. Sus datos se conservan (soft-delete).
+- **Cambiar el modo del bot:** `mock` (muestra conversaciones de demo) o `production` (mensajes reales del bot WhatsApp).
+- **Ver el dominio como hipervínculo** para abrir directamente el panel del complejo.
+
+### Por qué es diferente al login centralizado
+
+| | Platform Admin | Login Centralizado |
+|---|---|---|
+| **URL** | `platform.localhost:5173` | `app.localhost:5173/login` |
+| **Actor** | Equipo CANCHERO! | Dueños y operadores de complejos |
+| **Modelo de usuario** | `PlatformAdmin` (schema public) | `User` (schema del tenant) |
+| **JWT** | Claim `iss: "platform"` — no válido en endpoints de tenant | JWT estándar Simple JWT — válido en el panel del complejo |
+| **Qué gestiona** | Tenants del SaaS | Canchas, reservas, caja, bot |
+| **Intercambiables** | ❌ No | ❌ No |
+
+> Un JWT obtenido en `platform.localhost` no sirve para operar un tenant, y viceversa.
+> Son modelos de usuario y sistemas de auth completamente independientes.
+
+---
+
+## Login Centralizado (`app.localhost`)
+
+### Qué es
+
+Un único punto de entrada para que **dueños y operadores de cualquier complejo** inicien sesión
+sin necesidad de conocer la URL específica de su subdominio. En lugar de ir a `demo.localhost:5173/login`,
+el usuario va siempre a **`app.localhost:5173/login`** y el sistema detecta automáticamente a qué complejo pertenece.
 
 ### Flujo completo
 
