@@ -39,6 +39,7 @@ reserva-canchas/
 ├── frontend/                   # React 18 + Vite + TypeScript + Tailwind
 │   ├── src/
 │   │   ├── app/                # Bootstrap, providers
+│   │   ├── assets/              # Estáticos importados por componentes (logo.svg, etc.)
 │   │   ├── components/         # Componentes compartidos (NavBar, Sidebar, AdminLayout…)
 │   │   ├── context/            # React Contexts (ThemeContext, SidebarContext)
 │   │   ├── features/           # Dominios: booking, courts, cashbox, platform-admin, auth

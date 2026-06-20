@@ -9,6 +9,7 @@ import { Menu, Moon, Sun } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
 import { useThemeContext } from '@/context/ThemeContext'
 import { useSidebar } from '@/context/SidebarContext'
+import logoUrl from '@/assets/logo.svg'
 
 export interface NavBarProps {
   user: Pick<JWTPayload, 'email' | 'role'> | null
@@ -34,14 +35,9 @@ export function NavBar({ user }: NavBarProps) {
         <Menu size={22} aria-hidden="true" />
       </button>
 
-      {/* Logo */}
+      {/* Logo — isotipo oficial (escudo deportivo) */}
       <div className="flex items-center gap-2">
-        <div
-          className="w-7 h-7 bg-brand-600 rounded-md flex items-center justify-center"
-          aria-hidden="true"
-        >
-          <span className="text-white font-bold text-xs">C</span>
-        </div>
+        <img src={logoUrl} alt="" aria-hidden="true" className="h-8 w-auto" />
         <span className="text-sm font-semibold text-gray-900 dark:text-white">CANCHERO!</span>
       </div>
 

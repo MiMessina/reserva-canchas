@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
 import { useSidebar } from '@/context/SidebarContext'
+import logoUrl from '@/assets/logo.svg'
 
 interface NavItem {
   to: string
@@ -81,12 +82,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
       >
         {/* Cabecera del sidebar — solo visible en mobile (reemplaza el topbar tapado) */}
         <div className="md:hidden flex items-center gap-2 px-4 h-14 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          <div
-            className="w-7 h-7 bg-brand-600 rounded-md flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <span className="text-white font-bold text-xs">C</span>
-          </div>
+          <img src={logoUrl} alt="" aria-hidden="true" className="h-8 w-auto" />
           <span className="text-sm font-semibold text-gray-900 dark:text-white">CANCHERO!</span>
         </div>
 

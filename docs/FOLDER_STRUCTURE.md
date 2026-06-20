@@ -56,6 +56,7 @@ reserva-canchas/
 ├── frontend/
 │   ├── src/
 │   │   ├── app/                  # bootstrap, providers (QueryClient, router)
+│   │   ├── assets/               # estáticos importados por componentes (logo.svg, etc.)
 │   │   ├── components/           # componentes compartidos (Button, Modal, etc.)
 │   │   ├── features/
 │   │   │   ├── booking/          # grilla pública + flujo de reserva (jugador)
