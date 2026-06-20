@@ -237,6 +237,138 @@ def create_tenant_service(
     return tenant
 
 
+# ---------------------------------------------------------------------------
+# Sprint 14 — Login Centralizado
+# ---------------------------------------------------------------------------
+
+def lookup_email(email: str) -> list:
+    """
+    Retorna lista de tenants donde existe el email.
+    Corre en schema public (UserEmailIndex está ahí).
+
+    Returns:
+        Lista de dicts con schema_name, tenant_name, domain.
+    """
+    from apps.tenants.models import UserEmailIndex
+
+    entries = UserEmailIndex.objects.filter(email=email)
+    result = []
+    for entry in entries:
+        try:
+            tenant = Tenant.objects.get(schema_name=entry.schema_name, is_active=True)
+            domain = Domain.objects.filter(tenant=tenant, is_primary=True).first()
+            result.append({
+                "schema_name": entry.schema_name,
+                "tenant_name": tenant.name,
+                "domain": domain.domain if domain else entry.schema_name,
+            })
+        except Tenant.DoesNotExist:
+            pass
+    return result
+
+
+def central_login(email: str, password: str, schema_name: str) -> dict:
+    """
+    Autentica el user en el esquema dado y genera un OneTimeCode.
+
+    Returns:
+        {"code": ..., "redirect_url": ...}
+
+    Raises:
+        ValueError con código de negocio:
+            TENANT_INACTIVE, INVALID_CREDENTIALS, ROLE_NOT_ALLOWED
+    """
+    import secrets
+    from datetime import timedelta
+    from django.utils import timezone
+    from django_tenants.utils import schema_context
+    from apps.tenants.models import OneTimeCode
+
+    # Verificar tenant activo
+    try:
+        tenant = Tenant.objects.get(schema_name=schema_name, is_active=True)
+    except Tenant.DoesNotExist:
+        raise ValueError("TENANT_INACTIVE")
+
+    user_id = None
+    with schema_context(schema_name):
+        from apps.users.models import User as TenantUser
+        try:
+            user_obj = TenantUser.objects.get(email=email)
+        except TenantUser.DoesNotExist:
+            raise ValueError("INVALID_CREDENTIALS")
+
+        if not user_obj.check_password(password):
+            raise ValueError("INVALID_CREDENTIALS")
+
+        if not user_obj.is_active:
+            raise ValueError("INVALID_CREDENTIALS")
+
+        # Solo tenant_admin y operator pueden usar el login centralizado
+        if user_obj.role not in ("tenant_admin", "operator"):
+            raise ValueError("ROLE_NOT_ALLOWED")
+
+        user_id = user_obj.pk
+
+    # Generar código OTC (en schema public)
+    code = secrets.token_urlsafe(32)
+    expires_at = timezone.now() + timedelta(seconds=60)
+    OneTimeCode.objects.create(
+        code=code,
+        schema_name=schema_name,
+        user_id=user_id,
+        expires_at=expires_at,
+    )
+
+    domain = Domain.objects.filter(tenant=tenant, is_primary=True).first()
+    domain_str = domain.domain if domain else f"{schema_name}.localhost"
+    redirect_url = f"http://{domain_str}"
+
+    return {"code": code, "redirect_url": redirect_url}
+
+
+def exchange_code(code: str) -> dict:
+    """
+    Intercambia el OneTimeCode por un par JWT (access + refresh).
+    Marca el código como usado.
+
+    Returns:
+        {"access": ..., "refresh": ...}
+
+    Raises:
+        ValueError con código de negocio:
+            CODE_NOT_FOUND, CODE_ALREADY_USED, CODE_EXPIRED
+    """
+    from django.utils import timezone
+    from django_tenants.utils import schema_context
+    from rest_framework_simplejwt.tokens import RefreshToken
+    from apps.tenants.models import OneTimeCode
+
+    try:
+        otc = OneTimeCode.objects.get(code=code)
+    except OneTimeCode.DoesNotExist:
+        raise ValueError("CODE_NOT_FOUND")
+
+    if otc.used:
+        raise ValueError("CODE_ALREADY_USED")
+
+    if timezone.now() > otc.expires_at:
+        raise ValueError("CODE_EXPIRED")
+
+    otc.used = True
+    otc.save(update_fields=["used"])
+
+    with schema_context(otc.schema_name):
+        from apps.users.models import User as TenantUser
+        user = TenantUser.objects.get(pk=otc.user_id)
+        refresh = RefreshToken.for_user(user)
+
+    return {
+        "access": str(refresh.access_token),
+        "refresh": str(refresh),
+    }
+
+
 def get_complex_settings() -> ComplexSettings:
     """
     Retorna la configuración del complejo activo (tenant actual).

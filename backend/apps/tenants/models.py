@@ -206,3 +206,47 @@ class ComplexSettings(TimeStampedSoftDeleteModel):
 
     def __str__(self):
         return f"Configuración: {self.complex_name or '(sin nombre)'}"
+
+
+class UserEmailIndex(models.Model):
+    """
+    Índice global de emails de usuarios tenant (schema public).
+    Permite que el login centralizado encuentre en qué tenant(s) existe un email.
+    Permite emails duplicados entre tenants (unique por par email+schema).
+
+    Sprint 14 — Login Centralizado.
+    """
+
+    email = models.EmailField()
+    schema_name = models.CharField(max_length=63)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = "tenants"
+        unique_together = [("email", "schema_name")]
+        indexes = [models.Index(fields=["email"])]
+
+    def __str__(self):
+        return f"{self.email} → {self.schema_name}"
+
+
+class OneTimeCode(models.Model):
+    """
+    Código de un solo uso para transferir el JWT entre subdominios.
+    TTL: 60 segundos. Previene replay attacks con el flag `used`.
+
+    Sprint 14 — Login Centralizado.
+    """
+
+    code = models.CharField(max_length=64, unique=True, db_index=True)
+    schema_name = models.CharField(max_length=63)
+    user_id = models.IntegerField()
+    expires_at = models.DateTimeField()
+    used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = "tenants"
+
+    def __str__(self):
+        return f"OTC({self.schema_name}, used={self.used})"
