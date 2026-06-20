@@ -126,26 +126,32 @@ Esto hace automaticamente:
 
 1. Levanta PostgreSQL 16 y espera a que este listo (healthcheck).
 2. Instala dependencias Python y Node dentro de los contenedores.
-3. Ejecuta `migrate_schemas --shared` (esquema `public`: Tenant, Domain).
-4. Ejecuta `migrate_schemas` (esquema `demo`: Users, Courts, Bookings, Cashbox).
+3. Ejecuta `migrate_schemas --shared` (esquema `public`: Tenant, Domain, UserEmailIndex, OneTimeCode).
+4. Ejecuta `migrate_schemas` (todos los esquemas de tenant: Users, Courts, Bookings, Cashbox).
 5. Crea el tenant de prueba `demo` con su dominio `demo.localhost` (idempotente).
-6. Arranca el backend Django en `http://localhost:8000` (modo dev con runserver).
-7. Arranca el frontend Vite en `http://demo.localhost:5173` (con hot reload).
+6. Crea el superuser del Panel de System Admin (idempotente).
+7. Sincroniza el índice de emails para el login centralizado (`sync_email_index`, idempotente).
+8. Arranca el backend Django en `http://localhost:8000` (modo dev con runserver).
+9. Arranca el frontend Vite en `http://demo.localhost:5173` (con hot reload).
 
 ### Paso 3 — Configurar hostnames locales en Windows (unico paso manual)
 
-Los tenants y el panel de system admin resuelven por subdominio. Agregar al archivo
-`hosts` de Windows (requiere abrir el Bloc de Notas como Administrador):
+Los tenants, el panel de system admin y el login centralizado resuelven por subdominio.
+Agregar al archivo `hosts` de Windows (requiere abrir el Bloc de Notas como Administrador):
 
 ```
 # Archivo: C:\Windows\System32\drivers\etc\hosts
 127.0.0.1  demo.localhost
 127.0.0.1  platform.localhost
+127.0.0.1  app.localhost
 ```
 
 En Linux/macOS: editar `/etc/hosts` con `sudo`.
 
 Agregar una nueva linea por cada tenant adicional que se cree (ej: `127.0.0.1 complejo2.localhost`).
+
+> **Nota sobre `app.localhost`:** es el subdominio del login centralizado (Sprint 14).
+> Sin esta entrada en el archivo `hosts`, `http://app.localhost:5173/login` no va a resolver.
 
 ### Verificacion
 
@@ -159,6 +165,7 @@ Una vez que `docker compose up` termina de inicializar:
 | Frontend | `http://demo.localhost:5173` | App React (dev server con hot reload) |
 | Login API | `POST http://demo.localhost:8000/api/auth/login/` | JWT con usuario del tenant demo |
 | **Panel System Admin** | `http://platform.localhost:5173` | Panel interno del equipo (rol system_admin) |
+| **Login centralizado** | `http://app.localhost:5173/login` | Login único para tenant_admin y operator (Sprint 14) |
 
 ### Credenciales de desarrollo
 
@@ -264,6 +271,129 @@ docker compose down -v
 # Volver a levantar desde cero (recrea DB, migraciones y tenant demo)
 docker compose up --build
 ```
+
+---
+
+## Acceso al sistema — tres puertas de entrada
+
+El sistema tiene **tres URLs de acceso distintas**, cada una para un actor diferente. Es importante no confundirlas: usan modelos de usuario, flujos de autenticación y JWTs completamente separados.
+
+| URL | Para quién | Qué es |
+|-----|-----------|--------|
+| `http://app.localhost:5173/login` | Dueños y operadores de complejos | Login centralizado — Sprint 14 |
+| `http://platform.localhost:5173` | El equipo de CANCHERO! | Panel de administración del SaaS |
+| `http://<tenant>.localhost:5173` | Dueños y operadores (acceso directo) | Panel del complejo específico |
+
+---
+
+## Panel de System Admin (`platform.localhost`)
+
+### Qué es
+
+El panel de system admin es la herramienta **interna del equipo de CANCHERO!** para operar el SaaS. Desde acá se dan de alta los complejos (tenants), se activan o desactivan, y se configura el modo del bot.
+
+**No es accesible para los dueños de complejos ni para los jugadores.** Es exclusivo del rol `system_admin` (el equipo).
+
+### Cómo acceder
+
+```
+URL: http://platform.localhost:5173
+```
+
+Tiene su propia página de login en esa misma URL. Las credenciales se definen en el `.env`:
+
+```
+PLATFORM_ADMIN_EMAIL=admin@platform.localhost   (default)
+PLATFORM_ADMIN_PASSWORD=<definir en .env>       (obligatorio)
+```
+
+### Qué podés hacer
+
+- **Listar todos los complejos** (tenants) del SaaS con su dominio, estado y modo del bot.
+- **Crear un nuevo complejo:** define el nombre, el schema PostgreSQL, el dominio y las credenciales del admin inicial. El backend crea el esquema aislado automáticamente.
+- **Activar / desactivar un complejo:** un complejo inactivo no permite login. Sus datos se conservan (soft-delete).
+- **Cambiar el modo del bot:** `mock` (muestra conversaciones de demo) o `production` (mensajes reales del bot WhatsApp).
+- **Ver el dominio como hipervínculo** para abrir directamente el panel del complejo.
+
+### Por qué es diferente al login centralizado
+
+| | Platform Admin | Login Centralizado |
+|---|---|---|
+| **URL** | `platform.localhost:5173` | `app.localhost:5173/login` |
+| **Actor** | Equipo CANCHERO! | Dueños y operadores de complejos |
+| **Modelo de usuario** | `PlatformAdmin` (schema public) | `User` (schema del tenant) |
+| **JWT** | Claim `iss: "platform"` — no válido en endpoints de tenant | JWT estándar Simple JWT — válido en el panel del complejo |
+| **Qué gestiona** | Tenants del SaaS | Canchas, reservas, caja, bot |
+| **Intercambiables** | ❌ No | ❌ No |
+
+> Un JWT obtenido en `platform.localhost` no sirve para operar un tenant, y viceversa.
+> Son modelos de usuario y sistemas de auth completamente independientes.
+
+---
+
+## Login Centralizado (`app.localhost`)
+
+### Qué es
+
+Un único punto de entrada para que **dueños y operadores de cualquier complejo** inicien sesión
+sin necesidad de conocer la URL específica de su subdominio. En lugar de ir a `demo.localhost:5173/login`,
+el usuario va siempre a **`app.localhost:5173/login`** y el sistema detecta automáticamente a qué complejo pertenece.
+
+### Flujo completo
+
+```
+1. El operador ingresa su email en app.localhost:5173/login
+2. El sistema busca en qué complejo(s) tiene cuenta
+   - 0 resultados → "Email no registrado"
+   - 1 resultado  → pasa directo a la contraseña
+   - N resultados → muestra selector de complejo
+3. Ingresa la contraseña → el backend autentica en el schema del tenant
+4. El backend genera un código de un solo uso (TTL: 60 segundos)
+5. El browser redirige a http://<tenant>.localhost:5173?code=<otc>
+6. El frontend del tenant detecta el ?code=, lo intercambia por JWT
+   y navega al dashboard — el código queda invalidado
+```
+
+### Restricciones
+
+- Solo `tenant_admin` y `operator`. Los jugadores (`player`) no usan este flujo.
+- El panel de system admin (`platform.localhost`) no se ve afectado — sigue igual.
+- El código expira en 60 segundos y es de uso único (previene replay attacks).
+
+### Endpoints disponibles (schema public — `app.localhost:8000`)
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/auth/lookup-email/` | POST | Devuelve en qué complejo(s) existe el email |
+| `/api/auth/central-login/` | POST | Autentica y genera el código de un uso |
+| `/api/auth/exchange-code/` | POST | Intercambia el código por JWT (access + refresh) |
+
+Estos endpoints responden a cualquier host que no esté registrado como dominio de tenant
+(incluyendo `app.localhost` y `platform.localhost`).
+
+### URL para una landing page o acceso directo
+
+Si querés ofrecer a los complejos un link de acceso universal al panel de gestión,
+la URL canónica es:
+
+```
+http://app.localhost:5173/login          ← desarrollo local
+https://app.<tu-dominio-saas>.com/login  ← producción
+```
+
+Esta URL puede integrarse en una landing page pública, en el panel de bienvenida
+del system admin, o en los correos que se envíen a los administradores de nuevos complejos.
+
+### Agregar tenants creados antes del Sprint 14
+
+Los usuarios creados antes de este sprint no están indexados automáticamente.
+Si agregás un complejo con tenants existentes, corré:
+
+```bash
+docker compose exec backend python manage.py sync_email_index
+```
+
+Este comando es idempotente y también se ejecuta automáticamente al arrancar el backend.
 
 ---
 

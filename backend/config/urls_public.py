@@ -26,6 +26,11 @@ Aislamiento de JWT (ADR-013):
 from django.urls import include, path
 
 from apps.tenants.views import HealthCheckView
+from apps.tenants.views_auth import (
+    CentralLoginView,
+    ExchangeCodeView,
+    LookupEmailView,
+)
 from config.views_platform_auth import PlatformTokenObtainPairView, PlatformTokenRefreshView
 
 urlpatterns = [
@@ -46,4 +51,10 @@ urlpatterns = [
 
     # Endpoints de gestión de tenants
     path("api/platform/", include("apps.tenants.urls_platform")),
+
+    # Sprint 14 — Login Centralizado (PUBLIC_SCHEMA_URLCONF)
+    # Accesible desde app.localhost (o cualquier host que resuelva al schema public).
+    path("api/auth/lookup-email/", LookupEmailView.as_view(), name="auth-lookup-email"),
+    path("api/auth/central-login/", CentralLoginView.as_view(), name="auth-central-login"),
+    path("api/auth/exchange-code/", ExchangeCodeView.as_view(), name="auth-exchange-code"),
 ]

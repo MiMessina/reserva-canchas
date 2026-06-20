@@ -3,9 +3,10 @@
  * --------------------
  * Definicion central de rutas (React Router v6).
  *
- * ROUTING CONDICIONAL POR HOSTNAME (ADR-013):
- *   Si el hostname empieza con "platform.", se renderiza PlatformRoutes
- *   (panel de System Admin). Caso contrario, se usan las rutas de tenant.
+ * ROUTING CONDICIONAL POR HOSTNAME (ADR-013 + Sprint 14):
+ *   1. hostname empieza con "platform." → PlatformRoutes (panel System Admin)
+ *   2. hostname es "app.localhost"      → CentralLoginRoutes (login centralizado)
+ *   3. cualquier otro hostname          → rutas de tenant (el existente)
  *
  * Rutas Sprint 0:
  *   /login        → LoginPage (publica)
@@ -30,17 +31,25 @@
  *   /forgot-password              → ForgotPasswordPage
  *   /reset-password/:uid/:token   → ResetPasswordPage
  *
+ * Rutas Sprint 14 (login centralizado — app.localhost):
+ *   /login → CentralLoginPage
+ *
  * Layout:
  *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
  *   AdminLayout (navbar + Outlet). Las rutas /booking y /mis-reservas son
  *   públicas y tienen su propio header inline; no usan AdminLayout.
+ *
+ *   TenantRootLayout: layout raíz invisible del router de tenant. Monta
+ *   useCodeExchange para intercambiar ?code= al regresar desde app.localhost.
  */
 
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
 import { PlatformRoutes } from './PlatformRoutes'
 import { LoginPage } from '@/features/auth/LoginPage'
+import { CentralLoginPage } from '@/features/auth/CentralLoginPage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
+import { useCodeExchange } from '@/features/auth/useCodeExchange'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminLayout } from '@/components/AdminLayout'
 import { DashboardPage } from '@/app/DashboardPage'
@@ -56,103 +65,141 @@ import { ReportsPage } from '@/features/reports/ReportsPage'
 import { MyBookingsPage } from '@/features/myBookings/MyBookingsPage'
 import { SettingsPage } from '@/features/settings/SettingsPage'
 
-// ─── Routing condicional por hostname (ADR-013) ───────────────────────────────
-// Si el hostname empieza con "platform.", el panel de System Admin toma el control.
-// Las rutas de tenant no se cargan para ese hostname.
+// ─── Routing condicional por hostname (ADR-013 + Sprint 14) ──────────────────
+// Evaluado una sola vez al cargar el módulo (no cambia durante la sesión).
 
 const isPlatformAdmin = window.location.hostname.startsWith('platform.')
+const isCentralLogin = window.location.hostname === 'app.localhost'
 
-const router = createBrowserRouter([
+// ─── Layout raíz del tenant ───────────────────────────────────────────────────
+// Componente invisible que monta useCodeExchange al inicio de la app de tenant.
+// Necesita vivir dentro del RouterProvider para poder usar useNavigate.
+function TenantRootLayout() {
+  useCodeExchange()
+  return <Outlet />
+}
+
+// ─── Router del tenant ────────────────────────────────────────────────────────
+
+const tenantRouter = createBrowserRouter([
   {
-    // Ruta publica: login
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    // Ruta publica: grilla de turnos (AllowAny — el jugador no necesita cuenta)
-    // Tiene su propio header; NO usa AdminLayout.
-    path: '/booking',
-    element: <BookingPage />,
-  },
-  {
-    // Ruta publica: consulta de reservas por telefono (sin auth)
-    path: '/mis-reservas',
-    element: <MyBookingsPage />,
-  },
-  {
-    // Ruta publica: solicitud de recuperacion de contraseña
-    path: '/forgot-password',
-    element: <ForgotPasswordPage />,
-  },
-  {
-    // Ruta publica: confirmacion del reset de contraseña (link del email)
-    path: '/reset-password/:uid/:token',
-    element: <ResetPasswordPage />,
-  },
-  {
-    // Rutas protegidas (requieren JWT)
-    element: <ProtectedRoute />,
+    // Layout raíz: monta useCodeExchange sin alterar el HTML.
+    element: <TenantRootLayout />,
     children: [
       {
-        // AdminLayout: navbar + Outlet para todas las rutas del panel admin.
-        element: <AdminLayout />,
+        // Ruta publica: login
+        path: '/login',
+        element: <LoginPage />,
+      },
+      {
+        // Ruta publica: grilla de turnos (AllowAny — el jugador no necesita cuenta)
+        // Tiene su propio header; NO usa AdminLayout.
+        path: '/booking',
+        element: <BookingPage />,
+      },
+      {
+        // Ruta publica: consulta de reservas por telefono (sin auth)
+        path: '/mis-reservas',
+        element: <MyBookingsPage />,
+      },
+      {
+        // Ruta publica: solicitud de recuperacion de contraseña
+        path: '/forgot-password',
+        element: <ForgotPasswordPage />,
+      },
+      {
+        // Ruta publica: confirmacion del reset de contraseña (link del email)
+        path: '/reset-password/:uid/:token',
+        element: <ResetPasswordPage />,
+      },
+      {
+        // Rutas protegidas (requieren JWT)
+        element: <ProtectedRoute />,
         children: [
           {
-            path: '/',
-            element: <DashboardPage />,
-          },
-          {
-            path: '/admin/courts',
-            element: <CourtsListPage />,
-          },
-          {
-            path: '/admin/courts/:id',
-            element: <CourtDetailPage />,
-          },
-          {
-            path: '/admin/bookings',
-            element: <BookingsAdminPage />,
-          },
-          {
-            path: '/admin/cashbox',
-            element: <CashboxPage />,
-          },
-          {
-            path: '/admin/grid',
-            element: <DailyGridPage />,
-          },
-          {
-            path: '/admin/operators',
-            element: <OperatorsPage />,
-          },
-          {
-            path: '/admin/agent',
-            element: <ChatDemoPage />,
-          },
-          {
-            path: '/admin/reports',
-            element: <ReportsPage />,
-          },
-          {
-            path: '/admin/settings',
-            element: <SettingsPage />,
+            // AdminLayout: navbar + Outlet para todas las rutas del panel admin.
+            element: <AdminLayout />,
+            children: [
+              {
+                path: '/',
+                element: <DashboardPage />,
+              },
+              {
+                path: '/admin/courts',
+                element: <CourtsListPage />,
+              },
+              {
+                path: '/admin/courts/:id',
+                element: <CourtDetailPage />,
+              },
+              {
+                path: '/admin/bookings',
+                element: <BookingsAdminPage />,
+              },
+              {
+                path: '/admin/cashbox',
+                element: <CashboxPage />,
+              },
+              {
+                path: '/admin/grid',
+                element: <DailyGridPage />,
+              },
+              {
+                path: '/admin/operators',
+                element: <OperatorsPage />,
+              },
+              {
+                path: '/admin/agent',
+                element: <ChatDemoPage />,
+              },
+              {
+                path: '/admin/reports',
+                element: <ReportsPage />,
+              },
+              {
+                path: '/admin/settings',
+                element: <SettingsPage />,
+              },
+            ],
           },
         ],
       },
+      {
+        // Fallback: cualquier ruta desconocida va al root (que redirige segun auth)
+        path: '*',
+        element: <Navigate to="/" replace />,
+      },
     ],
-  },
-  {
-    // Fallback: cualquier ruta desconocida va al root (que redirige segun auth)
-    path: '*',
-    element: <Navigate to="/" replace />,
   },
 ])
 
+// ─── Router de login centralizado (app.localhost) ─────────────────────────────
+
+const centralRouter = createBrowserRouter([
+  {
+    path: '/login',
+    element: <CentralLoginPage />,
+  },
+  {
+    // Cualquier otra ruta en app.localhost redirige al login central
+    path: '*',
+    element: <Navigate to="/login" replace />,
+  },
+])
+
+// ─── AppRouter ────────────────────────────────────────────────────────────────
+
 export function AppRouter() {
-  // Si el hostname es platform.*, renderizar el panel de System Admin.
+  // 1. hostname platform.* → panel de System Admin
   if (isPlatformAdmin) {
     return <PlatformRoutes />
   }
 
-  return <RouterProvider router={router} />
+  // 2. hostname app.localhost → login centralizado (Sprint 14)
+  if (isCentralLogin) {
+    return <RouterProvider router={centralRouter} />
+  }
+
+  // 3. Cualquier otro hostname → rutas del tenant
+  return <RouterProvider router={tenantRouter} />
 }

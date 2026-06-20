@@ -59,6 +59,22 @@ const apiClient: AxiosInstance = axios.create({
   timeout: 15_000,
 })
 
+// ─── Instancia Axios para autenticación centralizada (app.localhost:8000) ────
+// Apunta siempre al schema public del backend, independientemente del hostname
+// del browser. Usada por los endpoints de login centralizado (Sprint 14).
+const _centralUrl = new URL(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api')
+_centralUrl.hostname = 'app.localhost'
+const centralBaseUrl = _centralUrl.toString().replace(/\/$/, '')
+
+export const centralApiClient: AxiosInstance = axios.create({
+  baseURL: centralBaseUrl,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+  timeout: 15_000,
+})
+
 // ─── Instancia Axios pública (sin JWT) ───────────────────────────────────────
 // Usada por la grilla pública de reservas (/booking). No adjunta ningún token
 // aunque el usuario esté logueado, para que el backend trate la request como
