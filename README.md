@@ -21,20 +21,42 @@ React + Vite + TypeScript + Tailwind (frontend, mobile-first) · Django REST Fra
 - Soft-delete (`is_active`); prohibido `DELETE` físico.
 - El backend es el source of truth; el frontend solo consume.
 
-## Estructura del kit
+## Estructura del proyecto
 
 ```txt
 reserva-canchas/
+├── backend/                    # Django REST Framework + django-tenants
+│   ├── apps/
+│   │   ├── common/             # Modelo base abstracto (TimeStampedSoftDeleteModel)
+│   │   ├── tenants/            # Modelo Tenant + Domain (schema public)
+│   │   ├── users/              # Custom User, JWT, roles
+│   │   ├── courts/             # ABM de canchas y ScheduleBlock
+│   │   ├── bookings/           # Motor de reservas, concurrencia, estados
+│   │   └── cashbox/            # Caja diaria, conciliación de señas
+│   ├── config/                 # settings, urls, wsgi
+│   ├── manage.py
+│   └── requirements.txt
+├── frontend/                   # React 18 + Vite + TypeScript + Tailwind
+│   ├── src/
+│   │   ├── app/                # Bootstrap, providers
+│   │   ├── components/         # Componentes compartidos (NavBar, Sidebar, AdminLayout…)
+│   │   ├── context/            # React Contexts (ThemeContext, SidebarContext)
+│   │   ├── features/           # Dominios: booking, courts, cashbox, platform-admin, auth
+│   │   ├── hooks/              # Hooks reutilizables
+│   │   ├── lib/                # Cliente Axios, helpers de timezone
+│   │   ├── routes/             # AppRouter, ProtectedRoute
+│   │   └── types/              # Tipos del contrato de API
+│   ├── package.json
+│   └── vite.config.ts
+├── landing/                    # Página pública de CANCHERO! (HTML estático, puerto 3000)
+├── docker/                     # Nginx + scripts de arranque
+│   └── nginx/nginx.conf        # Proxy reverso para producción
+├── docker-compose.yml
+├── .env.example                # Variables de entorno documentadas (sin secretos)
 ├── .claude/                    # Config ejecutable de Claude Code
-│   ├── agents/                 # Subagentes (instrucciones + delegación) — fuente única
-│   │   ├── orchestrator.md     # Milton (PO/Analista)
-│   │   ├── backend.md          # Luka + Erik
-│   │   ├── frontend.md         # Cris + Nacho
-│   │   ├── devops.md
-│   │   ├── security.md
-│   │   └── qa.md
+│   ├── agents/                 # Subagentes por rol (orchestrator, backend, frontend, devops, security, qa)
 │   └── commands/               # Slash commands (/sprint-0, /nueva-feature, /revisar-seguridad)
-├── docs/                       # Source of truth (contexto, arquitectura, reglas, RBAC, API, sprint 0)
+├── docs/                       # Source of truth documental
 │   ├── PROJECT_CONTEXT.md
 │   ├── ARCHITECTURE.md
 │   ├── STACK.md
@@ -43,19 +65,13 @@ reserva-canchas/
 │   ├── WORKFLOW.md
 │   ├── RBAC.md
 │   ├── API_GUIDELINES.md
-│   ├── SPRINT_0.md
 │   ├── DER.md                  # Modelo de datos core
-│   └── USER_STORIES.md         # Historias INVEST
+│   └── USER_STORIES.md
 ├── prompts/
-│   ├── MASTER_PROMPT.md        # Prompt maestro del Orchestrator
+│   ├── MASTER_PROMPT.md
 │   └── AGENT_TASK_TEMPLATE.md
-├── templates/
-│   ├── FEATURE_SPEC_TEMPLATE.md  # incluye ejemplo: Motor de Reservas
-│   ├── ADR_TEMPLATE.md           # incluye ejemplo: ADR-001 django-tenants
-│   └── PR_CHECKLIST.md
-└── checklists/
-    ├── ARCHITECTURE_CHECKLIST.md
-    └── RELEASE_READINESS_CHECKLIST.md
+├── templates/                  # ADR, Feature Spec, PR Checklist
+└── checklists/                 # Architecture y Release Readiness
 ```
 
 ## Equipo y roles
@@ -430,12 +446,12 @@ Ambas opciones son compatibles. Si tenías datos de demo y querés conectar el b
 
 ### Produccion / Cliente Cero
 
-El entorno Docker de este Sprint 0 es para desarrollo local. Para produccion (Cliente Cero):
+El entorno Docker actual es para desarrollo local. Para produccion (Cliente Cero):
 
 - Copiar `.env.example` al servidor y completar con valores reales.
 - `DJANGO_DEBUG=False` (obligatorio).
 - `DJANGO_SECRET_KEY` con una clave segura y unica.
-- Agregar Nginx como proxy reverso (ver `docker/nginx/` cuando se configure en Sprint 4).
+- Agregar Nginx como proxy reverso (configuración base en `docker/nginx/nginx.conf`).
 - SSL con Let's Encrypt / Certbot.
 - Quitar el puerto `5432` expuesto al host en `docker-compose.yml`.
 - Ver checklist completo en `.claude/agents/devops.md`.

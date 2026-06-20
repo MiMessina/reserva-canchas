@@ -65,3 +65,8 @@ Thumbs.db
 *.tmp
 *.bak
 *.orig
+
+# Scripts de prueba ad-hoc (no pertenecen al proyecto; se ignoran para conservarlos
+# localmente sin commitearlos hasta confirmar que no hacen falta)
+frontend/test_toggle_temp.cjs
+frontend/test_toggle_temp.mjs
