@@ -1,0 +1,123 @@
+# docker-compose.prod.yml — SaaS Gestión de Canchas (PRODUCCION)
+#
+# Diferencias clave vs docker-compose.yml (desarrollo):
+#   - frontend: build estático multi-stage, servido por Nginx (sin Vite dev server).
+#   - nginx: reverse proxy principal en el puerto 80, ruteo por subdominio.
+#   - Sin volúmenes de bind mount (sin hot-reload).
+#   - Variables desde .env.prod (no .env de desarrollo).
+#   - La DB NO expone el puerto 5432 al host (solo interno a la red Docker).
+#   - DEBUG=False → el backend arranca con gunicorn (lo decide entrypoint.sh).
+#
+# Uso en el servidor:
+#   cp .env.prod.example .env.prod
+#   # Completar .env.prod con valores reales
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Redis/Celery: Post-MVP. NO incluir (ver RULES.md y STACK.md).
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # db — PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Puerto NO expuesto al host en produccion: la DB solo es accesible
+    # por los servicios dentro de la red Docker interna (backend).
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # backend — Django REST Framework + django-tenants (gunicorn)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Puerto 8000 NO expuesto al host: Nginx hace el proxy internamente.
+    expose:
+      - "8000"
+    volumes:
+      # Static files: se montan en el volumen compartido con Nginx
+      - static_files:/app/staticfiles
+    # El entrypoint.sh detecta DEBUG=False y arranca gunicorn automáticamente.
+
+  # ---------------------------------------------------------------------------
+  # frontend — React + Vite (build estático servido por Nginx)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile.prod
+      args:
+        # Vite incrusta VITE_* en el bundle durante el build; no existe en runtime.
+        # El valor viene de .env.prod a traves de la variable VITE_API_BASE_URL.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    restart: unless-stopped
+    # Sin variables de entorno en runtime: todo queda compilado en el bundle.
+    expose:
+      - "80"
+    depends_on:
+      - backend
+
+  # ---------------------------------------------------------------------------
+  # landing — Página de presentación (HTML estático)
+  # ---------------------------------------------------------------------------
+  landing:
+    build:
+      context: .
+      dockerfile: docker/landing.Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+
+  # ---------------------------------------------------------------------------
+  # nginx — Reverse proxy principal
+  # Único servicio con puerto expuesto al host (80).
+  # Rutea por subdominio a frontend, backend o landing.
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - static_files:/app/staticfiles:ro
+    depends_on:
+      - backend
+      - frontend
+      - landing
+
+# ---------------------------------------------------------------------------
+# Volúmenes nombrados
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    # La DB persiste aunque el contenedor se elimine.
+    # Para resetear: docker compose -f docker-compose.prod.yml down -v
+  static_files:
+    # Archivos estáticos de Django compartidos entre backend y nginx.
+    # Backend los genera en /app/staticfiles; Nginx los sirve directamente.

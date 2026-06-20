@@ -7,12 +7,14 @@
 #   3. migrate_schemas (todos los tenants).
 #   4. Crea el tenant de prueba 'demo' si no existe (idempotente).
 #   5. Crea el superuser del Panel de System Admin si no existe (idempotente).
-#   6. Arranca gunicorn (produccion) o runserver (desarrollo).
+#   6. (Solo produccion) collectstatic — vuelca archivos estaticos al volumen compartido con Nginx.
+#   7. Arranca gunicorn (produccion) o runserver (desarrollo).
 #
 # Variables de entorno esperadas:
 #   POSTGRES_HOST, POSTGRES_PORT, DJANGO_DEBUG
 #   DEMO_ADMIN_EMAIL        - email del admin del tenant demo (default: admin@demo.localhost)
 #   DEMO_ADMIN_PASSWORD     - password del admin del tenant demo (SIN default; DEBE estar en .env)
+#   DEMO_TENANT_DOMAIN      - dominio del tenant demo (default: demo.localhost; en prod: demo.IP.nip.io)
 #   PLATFORM_ADMIN_EMAIL    - email del superuser del Panel de System Admin (default: admin@platform.localhost)
 #   PLATFORM_ADMIN_PASSWORD - password del superuser del Panel de System Admin (SIN default; DEBE estar en .env)
 
@@ -57,10 +59,12 @@ fi
 python manage.py init_tenant \
   --schema demo \
   --name "Complejo Demo" \
-  --domain demo.localhost \
+  --domain "${DEMO_TENANT_DOMAIN:-demo.localhost}" \
   --admin-email "${DEMO_ADMIN_EMAIL:-admin@demo.localhost}" \
   --admin-password "${DEMO_ADMIN_PASSWORD}"
 # init_tenant es idempotente: si el tenant ya existe sale con codigo 0.
+# DEMO_TENANT_DOMAIN: en desarrollo es "demo.localhost" (default).
+# En produccion debe ser el subdominio real, ej: "demo.146.190.12.34.nip.io".
 
 echo "[entrypoint] Inicializando superuser del Panel de System Admin..."
 
@@ -86,7 +90,10 @@ if [ "${DJANGO_DEBUG:-True}" = "True" ]; then
   echo "[entrypoint] Modo desarrollo: runserver en 0.0.0.0:8000"
   exec python manage.py runserver 0.0.0.0:8000
 else
-  echo "[entrypoint] Modo produccion: gunicorn"
+  echo "[entrypoint] Modo produccion: collectstatic + gunicorn"
+  # collectstatic reune los archivos estaticos (admin, swagger) en STATIC_ROOT.
+  # El volumen static_files los comparte con el contenedor Nginx.
+  python manage.py collectstatic --noinput
   exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 3 \
