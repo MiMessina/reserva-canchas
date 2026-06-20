@@ -322,7 +322,14 @@ def central_login(email: str, password: str, schema_name: str) -> dict:
 
     domain = Domain.objects.filter(tenant=tenant, is_primary=True).first()
     domain_str = domain.domain if domain else f"{schema_name}.localhost"
-    redirect_url = f"http://{domain_str}"
+
+    # Derivar el puerto del frontend desde FRONTEND_URL para que funcione
+    # en dev (:5173) y en producción (sin puerto).
+    from urllib.parse import urlparse
+    from django.conf import settings
+    parsed = urlparse(getattr(settings, "FRONTEND_URL", "http://localhost:5173"))
+    port_suffix = f":{parsed.port}" if parsed.port else ""
+    redirect_url = f"http://{domain_str}{port_suffix}"
 
     return {"code": code, "redirect_url": redirect_url}
 

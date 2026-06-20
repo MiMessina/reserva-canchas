@@ -76,6 +76,9 @@ python manage.py init_platform_admin \
   --password "${PLATFORM_ADMIN_PASSWORD}"
 # init_platform_admin es idempotente: si el superuser ya existe actualiza la contrasena.
 
+echo "[entrypoint] Sincronizando índice de emails para login centralizado..."
+python manage.py sync_email_index
+
 echo "[entrypoint] Configuracion completada."
 
 # Arrancar el servidor
