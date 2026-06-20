@@ -1,35 +1,51 @@
 /**
  * components/AdminLayout.tsx
  * --------------------------
- * Layout del panel de administracion (tenant_admin / operator).
- * Compone NavBar + <Outlet /> de React Router.
+ * Layout del panel de administración (tenant_admin / operator).
  *
- * Obtiene user y logout desde useAuth() internamente.
- * No contiene lógica de negocio: solo estructura visual del panel.
- *
- * Padding-top compensa la topbar fija en desktop (h-16 = pt-16).
- * Padding-bottom compensa la bottom tab bar en mobile (h-~16 = pb-16).
+ * Estructura:
+ *  - SidebarProvider: gestiona el estado abierto/cerrado con persistencia en localStorage.
+ *  - NavBar:  topbar fija (h-14) con botón hamburguesa, logo y toggle de tema.
+ *  - Sidebar: panel lateral colapsable; en mobile aparece como overlay con backdrop.
+ *  - main:    contenido desplazado a la derecha en desktop cuando el sidebar está abierto.
  */
 
 import { Outlet } from 'react-router-dom'
 import { NavBar } from './NavBar'
+import { Sidebar } from './Sidebar'
+import { SidebarProvider, useSidebar } from '@/context/SidebarContext'
 import { useAuth } from '@/features/auth/useAuth'
 
-export function AdminLayout() {
+function AdminLayoutInner() {
   const { user, logout } = useAuth()
+  const { isOpen } = useSidebar()
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <NavBar user={user} onLogout={logout} />
+      <Sidebar user={user} onLogout={logout} />
 
       {/*
-       * pt-14: compensa la topbar compacta de mobile (h-14).
-       * pb-16: compensa la bottom tab bar de mobile.
-       * md:pt-16 md:pb-0: en desktop, topbar alta (h-16) y sin bottom bar.
+       * pt-14:       compensa la topbar fija (h-14) en todos los tamaños.
+       * md:ml-60:    en desktop, desplaza el contenido cuando el sidebar está abierto.
+       * transition:  animación sincronizada con el sidebar (duration-200).
        */}
-      <main className="pt-14 pb-16 md:pt-16 md:pb-0">
+      <main
+        className={[
+          'pt-14 transition-[margin-left] duration-200 ease-in-out',
+          isOpen ? 'md:ml-60' : 'md:ml-0',
+        ].join(' ')}
+      >
         <Outlet />
       </main>
     </div>
+  )
+}
+
+export function AdminLayout() {
+  return (
+    <SidebarProvider>
+      <AdminLayoutInner />
+    </SidebarProvider>
   )
 }
