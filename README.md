@@ -141,6 +141,7 @@ Los tenants y el panel de system admin resuelven por subdominio. Agregar al arch
 # Archivo: C:\Windows\System32\drivers\etc\hosts
 127.0.0.1  demo.localhost
 127.0.0.1  platform.localhost
+127.0.0.1  app.localhost
 ```
 
 En Linux/macOS: editar `/etc/hosts` con `sudo`.
@@ -159,6 +160,7 @@ Una vez que `docker compose up` termina de inicializar:
 | Frontend | `http://demo.localhost:5173` | App React (dev server con hot reload) |
 | Login API | `POST http://demo.localhost:8000/api/auth/login/` | JWT con usuario del tenant demo |
 | **Panel System Admin** | `http://platform.localhost:5173` | Panel interno del equipo (rol system_admin) |
+| **Login centralizado** | `http://app.localhost:5173/login` | Login único para tenant_admin y operator (Sprint 14) |
 
 ### Credenciales de desarrollo
 
