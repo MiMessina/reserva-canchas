@@ -329,7 +329,7 @@ def central_login(email: str, password: str, schema_name: str) -> dict:
     from django.conf import settings
     parsed = urlparse(getattr(settings, "FRONTEND_URL", "http://localhost:5173"))
     port_suffix = f":{parsed.port}" if parsed.port else ""
-    redirect_url = f"http://{domain_str}{port_suffix}"
+    redirect_url = f"http://{domain_str}{port_suffix}/auth/callback"
 
     return {"code": code, "redirect_url": redirect_url}
 

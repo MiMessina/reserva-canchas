@@ -31,25 +31,26 @@
  *   /forgot-password              → ForgotPasswordPage
  *   /reset-password/:uid/:token   → ResetPasswordPage
  *
- * Rutas Sprint 14 (login centralizado — app.localhost):
- *   /login → CentralLoginPage
+ * Rutas Sprint 14/16 (login centralizado — app.localhost):
+ *   /login          → CentralLoginPage
+ *   /auth/callback  → AuthCallbackPage (ruta pública — intercambia OTC por JWT)
  *
  * Layout:
  *   Las rutas /admin/* y / pasan por ProtectedRoute (verifica JWT) →
  *   AdminLayout (navbar + Outlet). Las rutas /booking y /mis-reservas son
  *   públicas y tienen su propio header inline; no usan AdminLayout.
  *
- *   TenantRootLayout: layout raíz invisible del router de tenant. Monta
- *   useCodeExchange para intercambiar ?code= al regresar desde app.localhost.
+ *   TenantRootLayout: layout raíz invisible del router de tenant.
+ *   El intercambio del ?code= ahora ocurre en AuthCallbackPage (/auth/callback).
  */
 
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom'
 import { PlatformRoutes } from './PlatformRoutes'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { CentralLoginPage } from '@/features/auth/CentralLoginPage'
+import { AuthCallbackPage } from '@/features/auth/AuthCallbackPage'
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
-import { useCodeExchange } from '@/features/auth/useCodeExchange'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AdminLayout } from '@/components/AdminLayout'
 import { DashboardPage } from '@/app/DashboardPage'
@@ -72,10 +73,9 @@ const isPlatformAdmin = window.location.hostname.startsWith('platform.')
 const isCentralLogin = window.location.hostname === 'app.localhost'
 
 // ─── Layout raíz del tenant ───────────────────────────────────────────────────
-// Componente invisible que monta useCodeExchange al inicio de la app de tenant.
-// Necesita vivir dentro del RouterProvider para poder usar useNavigate.
+// Componente invisible que envuelve todas las rutas del tenant.
+// El intercambio de OTC ahora ocurre en AuthCallbackPage (/auth/callback).
 function TenantRootLayout() {
-  useCodeExchange()
   return <Outlet />
 }
 
@@ -90,6 +90,12 @@ const tenantRouter = createBrowserRouter([
         // Ruta publica: login
         path: '/login',
         element: <LoginPage />,
+      },
+      {
+        // Ruta publica: callback del login centralizado (patrón OAuth2)
+        // Intercambia el ?code= OTC por JWT — fuera de ProtectedRoute para evitar race condition.
+        path: '/auth/callback',
+        element: <AuthCallbackPage />,
       },
       {
         // Ruta publica: grilla de turnos (AllowAny — el jugador no necesita cuenta)
