@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# docker/scripts/server_setup.sh — Setup inicial del servidor Ubuntu 22.04 ARM64
+# docker/scripts/server_setup.sh — Setup inicial del servidor Ubuntu 22.04 x86_64
 # SaaS Gestion de Canchas (CANCHERO!)
 #
 # Ejecutar en el servidor como usuario ubuntu (con sudo) la primera vez:
-#   curl -fsSL https://raw.githubusercontent.com/TU_ORG/TU_REPO/master/docker/scripts/server_setup.sh | bash
-# o subir el script y correrlo:
 #   bash docker/scripts/server_setup.sh
 #
 # Que hace:
@@ -16,7 +14,7 @@
 #   6. Clona el repositorio
 #   7. Instrucciones finales
 #
-# Probado en: Ubuntu 22.04 LTS ARM64 (Oracle Cloud Ampere A1)
+# Probado en: Ubuntu 22.04 LTS x86_64 (Hetzner CX22)
 # NO ejecutar como root directo; el script usa sudo donde necesario.
 
 set -euo pipefail
@@ -24,14 +22,14 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Configuracion — ajustar antes de ejecutar
 # ---------------------------------------------------------------------------
-REPO_URL="https://github.com/MiMessina/reserva_canchas.git"
-REPO_DIR="/home/ubuntu/reserva_canchas"
+REPO_URL="https://github.com/MiMessina/reserva-canchas.git"
+REPO_DIR="/home/ubuntu/reserva-canchas"
 DEPLOY_USER="ubuntu"
 
 echo ""
 echo "=========================================="
 echo " CANCHERO! — Setup del servidor"
-echo " Ubuntu 22.04 ARM64 (Oracle Cloud)"
+echo " Ubuntu 22.04 x86_64 (Hetzner CX22)"
 echo "=========================================="
 echo ""
 
