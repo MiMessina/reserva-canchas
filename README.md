@@ -126,6 +126,7 @@ Editá `.env` y completá las variables obligatorias:
 | `POSTGRES_PASSWORD` | Una contraseña segura (no usar la del ejemplo en producción) |
 | `DEMO_ADMIN_PASSWORD` | **Obligatoria.** Contraseña del admin del tenant demo. El entrypoint falla si está vacía. |
 | `PLATFORM_ADMIN_PASSWORD` | **Obligatoria.** Contraseña del system admin. El entrypoint falla si está vacía. |
+| `VITE_CENTRAL_API_URL` | En dev: `http://app.localhost:8000/api` (valor por defecto). En producción: **obligatorio** — `http://app.<IP>.nip.io/api`. |
 | El resto | Los valores por defecto del `.env.example` funcionan para desarrollo local. |
 
 > **Si ya tenías el repo clonado y hiciste `git pull`:** comparás tu `.env` contra `.env.example`
@@ -178,7 +179,7 @@ Una vez que `docker compose up` termina de inicializar:
 |---|---|---|
 | **Landing page** | `http://localhost:3000` | Página pública de presentación de CANCHERO! |
 | Backend healthcheck | `http://localhost:8000/api/health/` | Devuelve `{"status": "ok"}` |
-| Swagger UI | `http://localhost:8000/api/docs/` | Documentacion interactiva de la API |
+| Swagger UI | `http://demo.localhost:8000/api/schema/swagger-ui/` | Documentacion interactiva de la API |
 | Frontend | `http://demo.localhost:5173` | App React (dev server con hot reload) |
 | Login API | `POST http://demo.localhost:8000/api/auth/login/` | JWT con usuario del tenant demo |
 | **Panel System Admin** | `http://platform.localhost:5173` | Panel interno del equipo (rol system_admin) |
@@ -365,10 +366,10 @@ el usuario va siempre a **`app.localhost:5173/login`** y el sistema detecta auto
    - 1 resultado  → pasa directo a la contraseña
    - N resultados → muestra selector de complejo
 3. Ingresa la contraseña → el backend autentica en el schema del tenant
-4. El backend genera un código de un solo uso (TTL: 60 segundos)
-5. El browser redirige a http://<tenant>.localhost:5173?code=<otc>
-6. El frontend del tenant detecta el ?code=, lo intercambia por JWT
-   y navega al dashboard — el código queda invalidado
+4. El backend genera un código de un solo uso (TTL: 60 segundos) y
+   redirige el browser a http://<tenant>.localhost:5173/auth/callback?code=<otc>
+5. La ruta pública /auth/callback intercambia el código por JWT
+   y navega al dashboard — el código queda invalidado en el backend
 ```
 
 ### Restricciones
@@ -449,10 +450,12 @@ Ambas opciones son compatibles. Si tenías datos de demo y querés conectar el b
 
 El entorno Docker actual es para desarrollo local. Para produccion (Cliente Cero):
 
-- Copiar `.env.example` al servidor y completar con valores reales.
+- Copiar `.env.prod.example` al servidor: `cp .env.prod.example .env.prod`
+  y reemplazar todos los `<placeholder>` con valores reales (especialmente `<SERVER_IP>`).
 - `DJANGO_DEBUG=False` (obligatorio).
 - `DJANGO_SECRET_KEY` con una clave segura y unica.
-- Agregar Nginx como proxy reverso (configuración base en `docker/nginx/nginx.conf`).
+- Nginx ya está configurado en `docker/nginx/nginx.prod.conf` y se activa
+  automáticamente con `docker-compose.prod.yml`. No requiere configuración adicional.
 - SSL con Let's Encrypt / Certbot.
 - Quitar el puerto `5432` expuesto al host en `docker-compose.yml`.
 - Ver checklist completo en `.claude/agents/devops.md`.
