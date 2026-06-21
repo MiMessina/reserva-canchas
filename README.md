@@ -130,9 +130,9 @@ Editá `.env` y completá las variables obligatorias:
 | El resto | Los valores por defecto del `.env.example` funcionan para desarrollo local. |
 
 > **Si ya tenías el repo clonado y hiciste `git pull`:** comparás tu `.env` contra `.env.example`
-> para detectar variables nuevas que se hayan agregado en sprints recientes. En particular,
-> `PLATFORM_ADMIN_PASSWORD` se agregó en Sprint 4 (ADR-013); si tu `.env` es anterior a eso,
-> no la tiene y el backend no levanta.
+> para detectar variables nuevas. Variables que pueden faltar en un `.env` viejo:
+> - `PLATFORM_ADMIN_PASSWORD` — el backend no levanta si está vacía.
+> - `VITE_CENTRAL_API_URL` — el login centralizado no funciona en producción si no está configurada. En desarrollo tiene un valor por defecto (`http://app.localhost:8000/api`) y funciona igual.
 
 ### Paso 2 — Levantar todo con un comando
 
@@ -168,8 +168,7 @@ En Linux/macOS: editar `/etc/hosts` con `sudo`.
 
 Agregar una nueva linea por cada tenant adicional que se cree (ej: `127.0.0.1 complejo2.localhost`).
 
-> **Nota sobre `app.localhost`:** es el subdominio del login centralizado (Sprint 14).
-> Sin esta entrada en el archivo `hosts`, `http://app.localhost:5173/login` no va a resolver.
+> **Nota sobre `app.localhost`:** es el subdominio del login centralizado — el punto de entrada único para dueños y operadores de cualquier complejo. Sin esta entrada en el archivo `hosts`, `http://app.localhost:5173/login` no va a resolver y el login centralizado no va a funcionar.
 
 ### Verificacion
 
@@ -183,7 +182,7 @@ Una vez que `docker compose up` termina de inicializar:
 | Frontend | `http://demo.localhost:5173` | App React (dev server con hot reload) |
 | Login API | `POST http://demo.localhost:8000/api/auth/login/` | JWT con usuario del tenant demo |
 | **Panel System Admin** | `http://platform.localhost:5173` | Panel interno del equipo (rol system_admin) |
-| **Login centralizado** | `http://app.localhost:5173/login` | Login único para tenant_admin y operator (Sprint 14) |
+| **Login centralizado** | `http://app.localhost:5173/login` | Login único para dueños y operadores de cualquier complejo |
 
 ### Credenciales de desarrollo
 
@@ -371,6 +370,18 @@ el usuario va siempre a **`app.localhost:5173/login`** y el sistema detecta auto
 5. La ruta pública /auth/callback intercambia el código por JWT
    y navega al dashboard — el código queda invalidado en el backend
 ```
+
+### La ruta `/auth/callback`
+
+Cuando el login centralizado es exitoso, el backend redirige al browser a:
+
+```
+http://<tenant>.localhost:5173/auth/callback?code=<otc>
+```
+
+Esta es una **ruta pública** del frontend de cada tenant. Su único propósito es interceptar el código de un uso (OTC), canjearlo por un par JWT y navegar al dashboard. Muestra un spinner mientras procesa.
+
+Si navegás a `/auth/callback` directamente sin `?code=`, redirige a `/login` sin hacer nada. Si el código ya fue usado o expiró (>60 segundos), también redirige a `/login?error=expired`.
 
 ### Restricciones
 
