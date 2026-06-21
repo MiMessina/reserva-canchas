@@ -9,6 +9,7 @@ import { Menu, Moon, Sun } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
 import { useThemeContext } from '@/context/ThemeContext'
 import { useSidebar } from '@/context/SidebarContext'
+import { useTenantInfo } from '@/hooks/useTenantInfo'
 import logoUrl from '@/assets/logo.svg'
 
 export interface NavBarProps {
@@ -19,6 +20,7 @@ export interface NavBarProps {
 export function NavBar({ user }: NavBarProps) {
   const { theme, toggle } = useThemeContext()
   const { toggle: toggleSidebar } = useSidebar()
+  const { complexName } = useTenantInfo()
 
   return (
     <header
@@ -38,7 +40,7 @@ export function NavBar({ user }: NavBarProps) {
       {/* Logo — isotipo oficial (escudo deportivo) */}
       <div className="flex items-center gap-2">
         <img src={logoUrl} alt="" aria-hidden="true" className="h-8 w-auto" />
-        <span className="text-sm font-semibold text-gray-900 dark:text-white">CANCHERO!</span>
+        <span className="text-sm font-semibold text-gray-900 dark:text-white">{complexName}</span>
       </div>
 
       <div className="flex-1" />

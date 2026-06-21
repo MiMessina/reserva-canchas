@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import type { JWTPayload } from '@/types/auth'
 import { useSidebar } from '@/context/SidebarContext'
+import { useTenantInfo } from '@/hooks/useTenantInfo'
 import logoUrl from '@/assets/logo.svg'
 
 interface NavItem {
@@ -45,6 +46,7 @@ export interface SidebarProps {
 
 export function Sidebar({ user, onLogout }: SidebarProps) {
   const { isOpen, close } = useSidebar()
+  const { complexName } = useTenantInfo()
 
   const visibleItems = NAV_ITEMS.filter(
     item => !item.allowedRoles || (user?.role && item.allowedRoles.includes(user.role))
@@ -83,7 +85,7 @@ export function Sidebar({ user, onLogout }: SidebarProps) {
         {/* Cabecera del sidebar — solo visible en mobile (reemplaza el topbar tapado) */}
         <div className="md:hidden flex items-center gap-2 px-4 h-14 border-b border-gray-200 dark:border-gray-700 shrink-0">
           <img src={logoUrl} alt="" aria-hidden="true" className="h-8 w-auto" />
-          <span className="text-sm font-semibold text-gray-900 dark:text-white">CANCHERO!</span>
+          <span className="text-sm font-semibold text-gray-900 dark:text-white">{complexName}</span>
         </div>
 
         {/* Ítems de navegación */}
