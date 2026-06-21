@@ -456,3 +456,35 @@ El entorno Docker actual es para desarrollo local. Para produccion (Cliente Cero
 - SSL con Let's Encrypt / Certbot.
 - Quitar el puerto `5432` expuesto al host en `docker-compose.yml`.
 - Ver checklist completo en `.claude/agents/devops.md`.
+
+#### Deploy en Oracle Cloud Free Tier (recomendado)
+
+Los archivos de producción ya están listos en el repo:
+
+- `docker-compose.prod.yml` — compose de producción con Nginx reverse proxy
+- `docker/nginx/nginx.prod.conf` — routing por subdominio (nip.io)
+- `docker/scripts/server_setup.sh` — setup del servidor desde cero
+- `docker/scripts/deploy.sh` — deploy automatizado
+- `.env.prod.example` — variables de entorno con placeholders
+
+**Instancia requerida: ARM Ampere A1 (Always Free)**
+- Shape: `VM.Standard.A1.Flex`
+- Mínimo: 1 OCPU + 6 GB RAM
+- Recomendado: 2 OCPU + 8 GB RAM
+
+> ⚠️ **No usar la instancia AMD E2.1.Micro** (1 GB RAM) — no tiene suficiente memoria para correr Docker + PostgreSQL + Django + Nginx juntos. El build del frontend solo requiere picos de 1-2 GB.
+
+**Pasos para el primer deploy:**
+```bash
+# 1. En el servidor (una sola vez)
+git clone https://github.com/MiMessina/reserva-canchas.git
+cd reserva-canchas
+bash docker/scripts/server_setup.sh
+
+# 2. Configurar variables con la IP real del servidor
+cp .env.prod.example .env.prod
+nano .env.prod   # reemplazar todos los <SERVER_IP>
+
+# 3. Deploy
+bash docker/scripts/deploy.sh
+```
