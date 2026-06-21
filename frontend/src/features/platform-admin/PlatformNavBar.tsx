@@ -10,8 +10,9 @@
  * Mobile: topbar compacta (solo logo) + bottom bar con logout.
  */
 
-import { LogOut, Shield, Moon, Sun } from 'lucide-react'
+import { LogOut, Moon, Sun } from 'lucide-react'
 import { useThemeContext } from '@/context/ThemeContext'
+import logoDarkUrl from '@/assets/logo-dark.svg'
 
 interface PlatformNavBarProps {
   email?: string
@@ -30,12 +31,7 @@ export function PlatformNavBar({ email, onLogout }: PlatformNavBarProps) {
       >
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0 mr-4">
-          <div
-            className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <Shield className="text-gray-300" size={16} />
-          </div>
+          <img src={logoDarkUrl} alt="" aria-hidden="true" className="h-10 w-auto" />
           <div>
             <span className="text-sm font-semibold text-white tracking-tight">
               CANCHERO!
@@ -87,12 +83,7 @@ export function PlatformNavBar({ email, onLogout }: PlatformNavBarProps) {
         className="md:hidden fixed top-0 inset-x-0 z-40 h-14 bg-gray-900 border-b border-gray-700 flex items-center px-4 gap-2"
         role="banner"
       >
-        <div
-          className="w-7 h-7 bg-gray-700 rounded-md flex items-center justify-center"
-          aria-hidden="true"
-        >
-          <Shield className="text-gray-300" size={14} />
-        </div>
+        <img src={logoDarkUrl} alt="" aria-hidden="true" className="h-8 w-auto" />
         <span className="text-sm font-semibold text-white">Plataforma</span>
         <button
           type="button"

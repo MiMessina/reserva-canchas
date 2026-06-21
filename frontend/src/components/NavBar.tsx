@@ -10,7 +10,8 @@ import type { JWTPayload } from '@/types/auth'
 import { useThemeContext } from '@/context/ThemeContext'
 import { useSidebar } from '@/context/SidebarContext'
 import { useTenantInfo } from '@/hooks/useTenantInfo'
-import logoUrl from '@/assets/logo.svg'
+import logoDarkUrl from '@/assets/logo-dark.svg'
+import logoLightUrl from '@/assets/logo-light.svg'
 
 export interface NavBarProps {
   user: Pick<JWTPayload, 'email' | 'role'> | null
@@ -39,7 +40,7 @@ export function NavBar({ user }: NavBarProps) {
 
       {/* Logo — isotipo oficial (escudo deportivo) */}
       <div className="flex items-center gap-2">
-        <img src={logoUrl} alt="" aria-hidden="true" className="h-8 w-auto" />
+        <img src={theme === 'dark' ? logoDarkUrl : logoLightUrl} alt="" aria-hidden="true" className="h-10 w-auto" />
         <span className="text-sm font-semibold text-gray-900 dark:text-white">{complexName}</span>
       </div>
 
