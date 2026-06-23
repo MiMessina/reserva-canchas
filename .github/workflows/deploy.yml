@@ -1,0 +1,124 @@
+# .github/workflows/deploy.yml
+# Deploy automático a producción — SaaS Gestión de Canchas (CANCHERO!)
+#
+# Se ejecuta SOLO cuando hay un push a master (merge de PR).
+# El CI (ci.yml) debe pasar primero; si falla, este workflow no corre
+# porque ambos responden al mismo evento push a master, pero el deploy
+# solo arranca si el job de CI fue exitoso en el mismo commit
+# (GitHub no garantiza el orden entre workflows; ver nota abajo).
+#
+# Flujo:
+#   1. SSH al servidor de producción (DigitalOcean / Hetzner).
+#   2. git pull origin master en /root/reserva-canchas.
+#   3. docker compose -f docker-compose.prod.yml up -d --build.
+#   4. Healthcheck: curl /api/health/ hasta que responda 200 o timeout.
+#
+# Secrets requeridos en GitHub (Settings → Secrets and variables → Actions):
+#   SSH_PRIVATE_KEY  — clave privada RSA/ED25519 del usuario del servidor
+#   SERVER_IP        — IP pública del servidor (ej: 159.223.155.49)
+#   SERVER_USER      — usuario SSH (ej: root)
+#
+# Nota sobre orden CI → Deploy:
+#   Para garantizar que el deploy solo ocurra si el CI pasó, este workflow
+#   usa el event "workflow_run" condicionado a ci.yml (ver campo "on" abajo).
+#   Si preferís el modelo más simple (push a master), reemplazá el "on" por:
+#     on:
+#       push:
+#         branches: [master]
+#   y confiás en que el CI corre antes por la protección de rama en GitHub.
+
+name: Deploy — Producción
+
+on:
+  workflow_run:
+    workflows:
+      - "CI — Tests y Build"
+    types:
+      - completed
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: Deploy al servidor de producción
+    runs-on: ubuntu-22.04
+
+    # Solo deployar si el CI pasó exitosamente
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Conectar al servidor y ejecutar deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          # Tiempo máximo para que todo el docker compose up --build termine
+          # (incluye pull de imágenes base y compilación de frontend)
+          command_timeout: "15m"
+          script: |
+            set -euo pipefail
+
+            echo ""
+            echo "=========================================="
+            echo " CANCHERO! — Deploy automatico via CI/CD"
+            echo "=========================================="
+            echo ""
+
+            cd /root/reserva-canchas
+
+            echo "[deploy] Actualizando codigo desde origin/master..."
+            git pull origin master
+            echo "[deploy] Codigo actualizado."
+            echo ""
+
+            # Verificar que .env.prod existe antes de intentar levantar
+            if [ ! -f ".env.prod" ]; then
+              echo "[deploy] ERROR: no existe .env.prod en /root/reserva-canchas."
+              echo "         Crealo antes de deployar (ver .env.prod.example)."
+              exit 1
+            fi
+
+            echo "[deploy] Levantando servicios con rebuild..."
+            docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+
+            echo ""
+            echo "[deploy] Contenedores levantados."
+
+      # Healthcheck separado: más visible en los logs de GitHub Actions
+      # y permite ver el resultado sin conectarse al servidor.
+      - name: Verificar healthcheck del backend (/api/health/)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          command_timeout: "3m"
+          script: |
+            set -euo pipefail
+
+            echo "[healthcheck] Esperando a que el backend responda en /api/health/..."
+
+            TIMEOUT=120
+            ELAPSED=0
+
+            until curl -sf "http://localhost/api/health/" > /dev/null 2>&1; do
+              if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+                echo ""
+                echo "[healthcheck] ERROR: el backend no respondio en ${TIMEOUT}s."
+                echo "[healthcheck] Ultimas 30 lineas del log del backend:"
+                docker compose -f /root/reserva-canchas/docker-compose.prod.yml logs --tail=30 backend
+                exit 1
+              fi
+              sleep 5
+              ELAPSED=$((ELAPSED + 5))
+              echo "[healthcheck] Esperando... (${ELAPSED}s/${TIMEOUT}s)"
+            done
+
+            echo ""
+            echo "[healthcheck] OK — backend respondiendo en /api/health/"
+            echo ""
+            echo "[healthcheck] Estado de los contenedores:"
+            docker compose -f /root/reserva-canchas/docker-compose.prod.yml ps
