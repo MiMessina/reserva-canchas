@@ -70,7 +70,7 @@ import { SettingsPage } from '@/features/settings/SettingsPage'
 // Evaluado una sola vez al cargar el módulo (no cambia durante la sesión).
 
 const isPlatformAdmin = window.location.hostname.startsWith('platform.')
-const isCentralLogin = window.location.hostname === 'app.localhost'
+const isCentralLogin = window.location.hostname.startsWith('app.')
 
 // ─── Layout raíz del tenant ───────────────────────────────────────────────────
 // Componente invisible que envuelve todas las rutas del tenant.

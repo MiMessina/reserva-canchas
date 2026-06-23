@@ -489,21 +489,79 @@ Los archivos de producción ya están listos en el repo:
 
 > ⚠️ **No usar instancias de 1 GB RAM** — no tienen suficiente memoria para correr Docker + PostgreSQL + Django + Nginx + build del frontend juntos.
 
-**Pasos para el primer deploy:**
+---
+
+##### Cómo funciona el sistema de subdominios (nip.io)
+
+El sistema usa [nip.io](https://nip.io) como DNS público gratuito: cualquier subdominio que contenga una IP se resuelve automáticamente a esa IP, sin configurar DNS propio.
+
+Ejemplo con IP `146.190.12.34`:
+- `demo.146.190.12.34.nip.io` → resuelve a `146.190.12.34`
+- `platform.146.190.12.34.nip.io` → resuelve a `146.190.12.34`
+- `app.146.190.12.34.nip.io` → resuelve a `146.190.12.34`
+
+Nginx recibe todas las requests en el puerto 80 y las distribuye según el prefijo del subdominio:
+
+| Subdominio | Destino |
+|---|---|
+| `platform.*` | Panel de System Admin |
+| `app.*` | Login centralizado |
+| `demo.*`, `lospinos.*`, etc. | Panel del complejo (tenant) |
+| IP directa (`http://<IP>`) | Landing page |
+
+No hay nada que configurar en el DNS del VPS: alcanza con que el `.env.prod` tenga la `SERVER_IP` correcta.
+
+---
+
+##### Paso a paso — primer deploy desde cero
+
 ```bash
-# 1. En el servidor (una sola vez) — el script instala Docker y clona el repo
+# ── PASO 1: Setup del servidor (una sola vez) ─────────────────────────────────
+# Desde el servidor (conectado por SSH como usuario ubuntu):
+
 git clone https://github.com/MiMessina/reserva-canchas.git
 cd reserva-canchas
 bash docker/scripts/server_setup.sh
+# El script instala Docker, Git, configura el firewall (puertos 22 y 80)
+# y deja el repo listo. Puede tardar 3-5 minutos.
 
-# 2. Configurar variables con la IP real del servidor
-# Reemplazar todos los <SERVER_IP> por la IP pública del VPS
+# ── PASO 2: Configurar variables de entorno ───────────────────────────────────
 cp .env.prod.example .env.prod
-sed -i 's/<SERVER_IP>/TU_IP_AQUI/g' .env.prod
-# Completar SECRET_KEY, POSTGRES_PASSWORD, DEMO_ADMIN_PASSWORD, PLATFORM_ADMIN_PASSWORD
 
-# 3. Deploy
+# Obtener la IP pública del servidor:
+curl -s ifconfig.me
+# Ejemplo: 146.190.12.34
+
+# Reemplazar TODOS los <SERVER_IP> por la IP real:
+sed -i 's/<SERVER_IP>/146.190.12.34/g' .env.prod
+
+# Completar el resto de variables sensibles con nano o vim:
+nano .env.prod
+```
+
+Variables obligatorias a completar en `.env.prod`:
+
+| Variable | Descripción | Cómo generarla |
+|---|---|---|
+| `DJANGO_SECRET_KEY` | Clave secreta de Django | `python3 -c "import secrets; print(secrets.token_urlsafe(60))"` |
+| `POSTGRES_PASSWORD` | Contraseña de la base de datos | Cualquier contraseña segura (mínimo 32 chars) |
+| `DEMO_ADMIN_EMAIL` | Email del admin del complejo demo | Dejar `admin@demo.localhost` o poner uno real |
+| `DEMO_ADMIN_PASSWORD` | Contraseña del admin demo | Contraseña segura, sin `!` al final |
+| `PLATFORM_ADMIN_EMAIL` | Email del admin de la plataforma | Dejar `admin@platform.localhost` o poner uno real |
+| `PLATFORM_ADMIN_PASSWORD` | Contraseña del admin de la plataforma | Contraseña segura, sin `!` al final |
+
+> Las variables `VITE_API_BASE_URL`, `VITE_CENTRAL_API_URL`, `FRONTEND_URL` y `DEMO_TENANT_DOMAIN` ya quedan correctas si usaste `sed` para reemplazar `<SERVER_IP>`. No hace falta editarlas manualmente.
+
+```bash
+# ── PASO 3: Deploy ────────────────────────────────────────────────────────────
 bash docker/scripts/deploy.sh
+# Hace git pull, verifica .env.prod, reconstruye y levanta los contenedores.
+# La primera vez puede tardar 5-10 minutos (build del frontend + migraciones).
+
+# ── PASO 4: Verificar ─────────────────────────────────────────────────────────
+IP=$(curl -s ifconfig.me)
+curl http://$IP/api/health/
+# Respuesta esperada: {"status": "ok"}
 ```
 
 **URLs de acceso (reemplazar `<IP>` por la IP del servidor):**
@@ -513,11 +571,40 @@ bash docker/scripts/deploy.sh
 | `http://<IP>` | Landing page |
 | `http://demo.<IP>.nip.io` | Panel del complejo demo |
 | `http://platform.<IP>.nip.io` | Panel de System Admin |
-| `http://app.<IP>.nip.io` | Login centralizado |
+| `http://app.<IP>.nip.io/login` | Login centralizado (dueños y operadores) |
 | `http://demo.<IP>.nip.io/api/docs/` | Swagger / API docs |
 
-**Para actualizaciones posteriores** (desde el servidor):
+---
+
+##### Actualizar el sistema (cuando hay cambios en master)
+
 ```bash
+# Desde el servidor, en el directorio del repo:
 cd ~/reserva-canchas
 bash docker/scripts/deploy.sh
+# El script hace git pull + rebuild automáticamente.
+```
+
+---
+
+##### Diagnóstico rápido en producción
+
+```bash
+# Ver estado de los contenedores
+docker compose -f docker-compose.prod.yml ps
+
+# Ver logs en tiempo real
+docker compose -f docker-compose.prod.yml logs -f
+
+# Ver solo logs del backend
+docker compose -f docker-compose.prod.yml logs -f backend
+
+# Entrar al contenedor del backend
+docker compose -f docker-compose.prod.yml exec backend bash
+
+# Verificar healthcheck
+curl http://localhost/api/health/
+
+# Sincronizar índice de emails (si el login centralizado no encuentra usuarios)
+docker compose -f docker-compose.prod.yml exec backend python manage.py sync_email_index
 ```
