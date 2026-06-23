@@ -48,9 +48,14 @@ export function clearPlatformTokens(): void {
 }
 
 // ─── Base URL ─────────────────────────────────────────────────────────────────
-// Apunta al mismo hostname pero puerto 8000, bajo /api/platform.
+// Deriva host y puerto de VITE_API_BASE_URL (igual que axios.ts) para que
+// funcione tanto en dev (:8000 directo) como en prod (Nginx en :80, sin puerto).
+// Dev:  VITE_API_BASE_URL=http://localhost:8000/api  → http://platform.localhost:8000/api/platform
+// Prod: VITE_API_BASE_URL=http://demo.<IP>.nip.io/api → http://platform.<IP>.nip.io/api/platform
 
-const _baseUrl = new URL(`http://${window.location.hostname}:8000/api/platform`)
+const _baseUrl = new URL(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api')
+_baseUrl.hostname = window.location.hostname
+_baseUrl.pathname = '/api/platform'
 const platformApiBaseUrl = _baseUrl.toString().replace(/\/$/, '')
 
 // ─── Instancia Axios ──────────────────────────────────────────────────────────
