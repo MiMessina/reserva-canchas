@@ -13,9 +13,10 @@ const STORAGE_KEY = 'canchero_sidebar_open'
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState<boolean>(() => {
     try {
-      return localStorage.getItem(STORAGE_KEY) === 'true'
+      const stored = localStorage.getItem(STORAGE_KEY)
+      return stored === null ? true : stored === 'true'
     } catch {
-      return false
+      return true
     }
   })
 

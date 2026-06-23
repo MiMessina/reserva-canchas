@@ -430,6 +430,34 @@ class TestExchangeCodeService(SafeTransactionTestCase):
             tenant_services.exchange_code(code)
         self.assertEqual(str(ctx.exception), "CODE_ALREADY_USED")
 
+    # ------------------------------------------------------------------
+    # Test Sprint 20: JWT contiene claim 'role'
+    # ------------------------------------------------------------------
+
+    def test_exchange_code_jwt_contains_role_claim(self):
+        """exchange_code → access token incluye claim 'role' con valor correcto."""
+        import base64
+        import json
+
+        schema = "clexchrole"
+        email = "admin@clexchrole.com"
+        password = "pass12345"
+        self._register(schema)
+        _create_tenant_and_user(schema, f"{schema}.localhost", email, password, role="tenant_admin")
+
+        connection.set_schema_to_public()
+        login_result = tenant_services.central_login(email=email, password=password, schema_name=schema)
+        tokens = tenant_services.exchange_code(login_result["code"])
+
+        # Decodificar payload del access token (sin verificar firma)
+        payload_b64 = tokens["access"].split(".")[1]
+        # Agregar padding si hace falta
+        payload_b64 += "=" * (4 - len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+
+        self.assertIn("role", payload, "El JWT no contiene el claim 'role'")
+        self.assertEqual(payload["role"], "tenant_admin")
+
 
 # ---------------------------------------------------------------------------
 # Test 11: Señal post_save → TenantTestCase (tiene esquema 'test' disponible)
