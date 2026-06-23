@@ -369,6 +369,7 @@ def exchange_code(code: str) -> dict:
         from apps.users.models import User as TenantUser
         user = TenantUser.objects.get(pk=otc.user_id)
         refresh = RefreshToken.for_user(user)
+        refresh["role"] = user.role
 
     return {
         "access": str(refresh.access_token),
